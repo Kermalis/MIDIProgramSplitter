@@ -5,6 +5,7 @@
 		<OutputType>Exe</OutputType>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -13,5 +14,9 @@
 			<HintPath>Dependencies\KMIDI.dll</HintPath>
 		</Reference>
 	</ItemGroup>
+
+	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+		<DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+	</PropertyGroup>
 
 </Project>
