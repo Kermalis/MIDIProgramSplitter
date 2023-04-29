@@ -77,7 +77,8 @@ internal static class Program
 		{
 			var chans = new FLChannel[]
 			{
-				new FLChannel("Test Chan!", 0, 0),
+				new FLChannel("Test Chan 0!", 0, 0),
+				new FLChannel("CHAN ONE", 1, 60),
 			};
 			var autos = new FLAutomation[]
 			{
