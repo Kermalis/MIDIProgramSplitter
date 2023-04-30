@@ -97,9 +97,9 @@ internal sealed class FLChannel
 		MIDIProgram = midiProgram;
 	}
 
-	public void Write(EndianBinaryWriter w, int i, uint filterNum)
+	public void Write(EndianBinaryWriter w, ushort id, uint filterNum)
 	{
-		FLProject.WriteWordEvent(w, FLEvent.NewChannel, (ushort)i);
+		FLProject.WriteWordEvent(w, FLEvent.NewChannel, id);
 		FLProject.WriteByteEvent(w, FLEvent.ChannelType, (byte)FLChanType.Osc3x_MIDIOut);
 		FLProject.WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "MIDI Out\0");
 		FLProject.WriteBytesEventWithLength(w, FLEvent.NewPlugin, NewPlugin_DeselectedTopLeft);
@@ -127,8 +127,8 @@ internal sealed class FLChannel
 		FLProject.WriteBytesEventWithLength(w, FLEvent.BasicChanParams, BasicChanParams);
 		FLProject.WriteBytesEventWithLength(w, FLEvent.ChanOfsLevels, ChanOfsLevels);
 		FLProject.WriteBytesEventWithLength(w, FLEvent.ChanPoly, ChanPoly);
-		WriteChanParams(w, i);
-		FLProject.WriteDWordEvent(w, FLEvent.CutCutBy, (uint)(i + 1) * 0x10_001u); // Why lol
+		WriteChanParams(w, id);
+		FLProject.WriteDWordEvent(w, FLEvent.CutCutBy, (uint)(id + 1) * 0x10_001u); // Why lol
 		FLProject.WriteDWordEvent(w, FLEvent.ChannelLayerFlags, 0);
 		FLProject.WriteDWordEvent(w, FLEvent.ChanFilterNum, filterNum);
 		FLProject.WriteByteEvent(w, FLEvent.Unk_32, 0);
@@ -152,12 +152,12 @@ internal sealed class FLChannel
 		w.WriteByte((byte)(MIDIProgram + 1));
 		w.WriteBytes(PluginParamsPart3);
 	}
-	private static void WriteChanParams(EndianBinaryWriter w, int i)
+	private static void WriteChanParams(EndianBinaryWriter w, ushort id)
 	{
 		w.WriteEnum(FLEvent.ChannelParams);
 		FLProject.WriteTextEventLength(w, 168);
 		w.WriteBytes(ChanParamsPart1);
-		w.WriteByte((byte)i);
+		w.WriteByte((byte)id);
 		w.WriteBytes(ChanParamsPart2);
 	}
 }

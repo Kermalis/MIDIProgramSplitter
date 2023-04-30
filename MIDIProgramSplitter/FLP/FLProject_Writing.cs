@@ -10,10 +10,9 @@ partial class FLProject
 	/// <summary>The project was started on 26/4/23 17:20. Total time spent on it: 4 minutes? This is probably the wrong file</summary>
 	private static ReadOnlySpan<byte> ProjectTime_Default => new byte[16] { 0xC5, 0x8D, 0x96, 0x1D, 0x57, 0xFE, 0xE5, 0x40, 0x00, 0x00, 0x00, 0x50, 0xAA, 0x93, 0x25, 0x3F };
 
-	private static ReadOnlySpan<byte> RemoteCtrl_MIDI0 => new byte[20] { 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x90, 0xFF, 0x0F, 0x04, 0x00, 0x00, 0x00, 0xD5, 0x01, 0x00, 0x00 };
-	private static ReadOnlySpan<byte> RemoteCtrl_MIDI1 => new byte[20] { 0xFD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x90, 0xFF, 0x0F, 0x04, 0x00, 0x00, 0x00, 0xD5, 0x01, 0x00, 0x00 };
-	private static ReadOnlySpan<byte> RemoteCtrl_MIDI2 => new byte[20] { 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0xFF, 0x0F, 0x04, 0x00, 0x00, 0x00, 0x00, 0xFE, 0xFF, 0xFF };
-	private static ReadOnlySpan<byte> RemoteCtrl_Int => new byte[20] { 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0xD5, 0x01, 0x00, 0x00 };
+	private static ReadOnlySpan<byte> MIDIInfo0 => new byte[20] { 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x90, 0xFF, 0x0F, 0x04, 0x00, 0x00, 0x00, 0xD5, 0x01, 0x00, 0x00 };
+	private static ReadOnlySpan<byte> MIDIInfo1 => new byte[20] { 0xFD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x90, 0xFF, 0x0F, 0x04, 0x00, 0x00, 0x00, 0xD5, 0x01, 0x00, 0x00 };
+	private static ReadOnlySpan<byte> MIDIInfo2 => new byte[20] { 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0xFF, 0x0F, 0x04, 0x00, 0x00, 0x00, 0x00, 0xFE, 0xFF, 0xFF };
 
 	// 0x0C if unmuted, 0x04 if muted.
 	private static ReadOnlySpan<byte> FXParams_Insert0And125 => new byte[12] { 0x00, 0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -71,12 +70,8 @@ partial class FLProject
 		long dataLenOffset = s.Position;
 		w.WriteUInt32(0); // Write length later
 
-		WriteProjectInfo(w, automations, patterns);
-		uint chanFilter = automations.Length == 0 ? 0u : 1;
-		for (int i = 0; i < channels.Length; i++)
-		{
-			channels[i].Write(w, i, chanFilter);
-		}
+		WriteProjectInfo(w, automations.Length != 0, patterns);
+		WriteChannels(w, ppqn, channels, automations);
 		WriteArrangement(w, 0, playlistItems);
 		WriteMoreStuffIDK(w);
 		WriteInsertMaster(w);
@@ -138,7 +133,7 @@ partial class FLProject
 		w.WriteBytes(bytes);
 	}
 
-	private static void WriteProjectInfo(EndianBinaryWriter w, ReadOnlySpan<FLAutomation> automations, ReadOnlySpan<FLPattern> patterns)
+	private static void WriteProjectInfo(EndianBinaryWriter w, bool hasAutomations, ReadOnlySpan<FLPattern> patterns)
 	{
 		WriteUTF8EventWithLength(w, FLEvent.Version, "20.9.2.2963\0");
 		WriteDWordEvent(w, FLEvent.VersionBuildNumber, 2963);
@@ -165,16 +160,14 @@ partial class FLProject
 		// ProjectURL would go here
 		WriteBytesEventWithLength(w, FLEvent.ProjectTime, ProjectTime_Default);
 
-		WriteChanFilters(w, automations.Length != 0);
+		WriteChanFilters(w, hasAutomations);
 		WritePatterns(w, patterns);
 
-		WriteBytesEventWithLength(w, FLEvent.RemoteCtrl_MIDI, RemoteCtrl_MIDI0);
-		WriteBytesEventWithLength(w, FLEvent.RemoteCtrl_MIDI, RemoteCtrl_MIDI1);
-		WriteBytesEventWithLength(w, FLEvent.RemoteCtrl_MIDI, RemoteCtrl_MIDI2);
-		if (automations.Length > 0)
-		{
-			WriteBytesEventWithLength(w, FLEvent.RemoteCtrl_Int, RemoteCtrl_Int);
-		}
+		// No idea what these mean, but there are 3 and they're always the same in all my projects.
+		// Dunno if it's MIDI keyboard related or something, because I only have 1
+		WriteBytesEventWithLength(w, FLEvent.MIDIInfo, MIDIInfo0);
+		WriteBytesEventWithLength(w, FLEvent.MIDIInfo, MIDIInfo1);
+		WriteBytesEventWithLength(w, FLEvent.MIDIInfo, MIDIInfo2);
 	}
 	private static void WriteChanFilters(EndianBinaryWriter w, bool hasAutomations)
 	{
@@ -205,6 +198,25 @@ partial class FLProject
 				WriteWordEvent(w, FLEvent.NewPattern, (ushort)(i + 1));
 				patterns[i].WritePatternNotes(w);
 			}
+		}
+	}
+	private static void WriteChannels(EndianBinaryWriter w, uint ppqn, ReadOnlySpan<FLChannel> channels, ReadOnlySpan<FLAutomation> automations)
+	{
+		for (int i = 0; i < automations.Length; i++)
+		{
+			automations[i].WriteAutomationConnection(w, (ushort)(channels.Length + i), channels);
+		}
+
+		uint chanFilter = automations.Length == 0 ? 0u : 1;
+		ushort chanID = 0;
+		foreach (FLChannel c in channels)
+		{
+			c.Write(w, chanID++, chanFilter);
+		}
+		chanFilter = 0;
+		foreach (FLAutomation a in automations)
+		{
+			a.Write(w, chanID++, chanFilter, ppqn);
 		}
 	}
 	private static void WriteArrangement(EndianBinaryWriter w, ushort arrangementIndex, ReadOnlySpan<FLPlaylistItem> playlistItems)

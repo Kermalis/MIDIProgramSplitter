@@ -172,26 +172,22 @@ internal enum FLEvent : byte
 	OldFilterParams,
 	ChanPoly,
 	NoteEvents,
-	AutomationData,
+	PatternEvents,
 	PatternNotes,
 	/// <summary>Init values for automated events</summary>
 	InitCtrlRecChan,
-	/// <summary>Remote control entry (MIDI)</summary>
-	RemoteCtrl_MIDI,
-	/// <summary>Remote control entry (internal)</summary>
-	RemoteCtrl_Int,
+	MIDIInfo,
+	AutomationConnection,
 	/// <summary>Vol/kb tracking</summary>
 	ChannelTracking,
 	/// <summary>Levels offset</summary>
 	ChanOfsLevels,
 	/// <summary>Remote control entry formula</summary>
 	RemoteCtrlFormula,
-	/// <summary>Value like "Audio" or "Unsorted"</summary>
 	ChanFilterName,
 	RegBlackList,
 	PlaylistItems,
-	/// <summary>Channel articulator</summary>
-	ChanAC,
+	AutomationData,
 	FXRouting,
 	FXParams,
 	/// <summary>Value like: 10 DF D7 ED 3B A4 E5 40 00 00 00 E0 C9 BE 32 3F</summary>

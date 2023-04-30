@@ -192,10 +192,10 @@ internal sealed partial class FLProject
 		string type;
 		string str;
 
-		if (ev == FLEvent.ChanAC)
+		if (ev == FLEvent.AutomationData)
 		{
-			type = "AutomationData";
-			str = FLAutomation.ReadChanAC(text);
+			type = "Bytes";
+			str = FLAutomation.ReadData(text);
 		}
 		else
 		{
