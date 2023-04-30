@@ -75,15 +75,15 @@ internal sealed partial class FLProject
 			FLEvent ev = r.ReadEnum<FLEvent>();
 			uint data = ReadDataForEvent(r, ev, out byte[]? text);
 
-			if (ev < FLEvent.NewChan)
+			if (ev < FLEvent.NewChannel)
 			{
 				HandleEvent_Byte(ev, data);
 			}
-			else if (ev is >= FLEvent.NewChan and < FLEvent.Color)
+			else if (ev is >= FLEvent.NewChannel and < FLEvent.Color)
 			{
 				HandleEvent_Word(ev, data);
 			}
-			else if (ev is >= FLEvent.Color and < FLEvent.ChanName)
+			else if (ev is >= FLEvent.Color and < FLEvent.ChannelName)
 			{
 				HandleEvent_DWord(ev, data);
 			}
@@ -99,16 +99,16 @@ internal sealed partial class FLProject
 
 		uint data = r.ReadByte();
 
-		if (ev is >= FLEvent.NewChan and < FLEvent.ChanName)
+		if (ev is >= FLEvent.NewChannel and < FLEvent.ChannelName)
 		{
 			data |= (uint)r.ReadByte() << 8;
 		}
-		if (ev is >= FLEvent.Color and < FLEvent.ChanName)
+		if (ev is >= FLEvent.Color and < FLEvent.ChannelName)
 		{
 			data |= (uint)r.ReadByte() << 16;
 			data |= (uint)r.ReadByte() << 24;
 		}
-		if (ev >= FLEvent.ChanName)
+		if (ev >= FLEvent.ChannelName)
 		{
 			// Only have the first byte in data currently
 			text = new byte[ReadTextLen(r, data)];
@@ -121,9 +121,9 @@ internal sealed partial class FLProject
 	{
 		switch (ev)
 		{
-			case FLEvent.ChanType:
+			case FLEvent.ChannelType:
 			{
-				Log($"Byte: ChanType = {data} ({(FLChanType)data})");
+				Log(string.Format("Byte: {0} = {1} ({2})", ev, data, (FLChanType)data));
 				break;
 			}
 			default:
@@ -137,38 +137,88 @@ internal sealed partial class FLProject
 	}
 	private void HandleEvent_Word(FLEvent ev, uint data)
 	{
-		CheckEventExists(ev);
+		switch (ev)
+		{
+			case FLEvent.SwingMix:
+			case FLEvent.FX:
+			case FLEvent.FX3:
+			case FLEvent.StDel:
+			case FLEvent.CutOff:
+			{
+				Log(string.Format("Word: {0} = 0x{1:X}", ev, data));
+				break;
+			}
+			default:
+			{
+				CheckEventExists(ev);
 
-		Log(string.Format("Word: {0} = {1}", ev, data));
+				Log(string.Format("Word: {0} = {1}", ev, data));
+				break;
+			}
+		}
 	}
 	private void HandleEvent_DWord(FLEvent ev, uint data)
 	{
-		CheckEventExists(ev);
+		switch (ev)
+		{
+			case FLEvent.Color:
+			{
+				Log(string.Format("DWord: {0} = 0x{1:X6}", ev, data));
+				break;
+			}
+			case FLEvent.DelayReso:
+			case FLEvent.Reverb:
+			case FLEvent.FXSine:
+			case FLEvent.CutCutBy:
+			case FLEvent.ChannelLayerFlags:
+			case FLEvent.ChannelSampleFlags:
+			case FLEvent.FXInChanNum:
+			case FLEvent.FXOutChanNum:
+			{
+				Log(string.Format("DWord: {0} = 0x{1:X}", ev, data));
+				break;
+			}
+			default:
+			{
+				CheckEventExists(ev);
 
-		Log(string.Format("DWord: {0} = {1}", ev, data));
+				Log(string.Format("DWord: {0} = {1}", ev, data));
+				break;
+			}
+		}
 	}
 	private void HandleEvent_Text(FLEvent ev, byte[] text)
 	{
-		CheckEventExists(ev);
-
 		string type;
 		string str;
-		if (IsUTF8(ev))
+
+		if (ev == FLEvent.ChanAC)
 		{
-			type = "UTF8";
-			str = $"\"{Encoding.UTF8.GetString(text).Replace("\0", "\\0")}\"";
-		}
-		else if (IsUTF16(ev))
-		{
-			type = "UTF16";
-			str = $"\"{Encoding.Unicode.GetString(text).Replace("\0", "\\0")}\"";
+			type = "AutomationData";
+			str = FLAutomation.ReadChanAC(text);
 		}
 		else
 		{
-			type = "Bytes";
-			str = BytesString(text);
+			CheckEventExists(ev);
+
+			if (IsUTF8(ev))
+			{
+				type = "UTF8";
+				str = DecodeString(Encoding.UTF8, text);
+			}
+			else if (IsUTF16(ev))
+			{
+				type = "UTF16";
+				str = DecodeString(Encoding.Unicode, text);
+			}
+			else
+			{
+				type = "Bytes";
+				str = BytesString(text);
+			}
 		}
-		Log(string.Format("{0}: {1} - {2} = {3}", type, ev, text.Length, str));
+		Log(string.Format("{0}: {1} - {2} = {3}",
+			type, ev, text.Length, str));
 	}
 
 	private void CheckEventExists(FLEvent ev)
@@ -190,6 +240,14 @@ internal sealed partial class FLProject
 	{
 		_log.AppendLine(msg);
 	}
+	private static string DecodeString(Encoding e, byte[] bytes)
+	{
+		string str = e.GetString(bytes)
+			.Replace("\0", "\\0")
+			.Replace("\r", "\\r")
+			.Replace("\n", "\\n");
+		return '\"' + str + '\"';
+	}
 	private static string BytesString(byte[] bytes)
 	{
 		if (bytes.Length == 0)
@@ -204,26 +262,29 @@ internal sealed partial class FLProject
 		switch (ev)
 		{
 			// Byte
-			case FLEvent.ChanVol:
-			case FLEvent.ChanPan:
-			case FLEvent.MainVol:
+			case FLEvent.ChannelVolume:
+			case FLEvent.ChannelPanpot:
+			case FLEvent.MainVolume: // Now stored in _initCtrlRecChan
 			case FLEvent.FitToSteps:
 			case FLEvent.Pitchable:
 			case FLEvent.DelayFlags:
 			case FLEvent.NStepsShown:
+
 			// Word
-			case FLEvent.Tempo:
+			case FLEvent.Tempo: // FineTempo is used now
 			case FLEvent.RandChan:
 			case FLEvent.MixChan:
 			case FLEvent.OldSongLoopPos:
-			case FLEvent.TempoFine:
+			case FLEvent.TempoFine: // FineTempo is used now
+
 			// DWord
-			case FLEvent.PlayListItem:
+			case FLEvent.PlaylistItem:
 			case FLEvent.MainResoCutOff:
 			case FLEvent.SSNote:
 			case FLEvent.PatAutoMode:
+
 			// Text
-			case FLEvent.ChanName:
+			case FLEvent.ChannelName: // PluginName is used now
 			case FLEvent.DelayLine:
 			case FLEvent.OldFilterParams:
 				return true;
@@ -243,21 +304,21 @@ internal sealed partial class FLProject
 	{
 		switch (ev)
 		{
-			case FLEvent.Title:
-			case FLEvent.Comment:
-			case FLEvent.URL:
+			case FLEvent.ProjectTitle:
+			case FLEvent.ProjectComment:
+			case FLEvent.ProjectURL:
 			case FLEvent.RegistrationID:
 			case FLEvent.DefPluginName:
 			case FLEvent.ProjectDataPath:
 			case FLEvent.PluginName:
 			case FLEvent.FXName:
-			case FLEvent.TimeMarker:
-			case FLEvent.Genre:
-			case FLEvent.Author:
+			case FLEvent.TimeMarkerName:
+			case FLEvent.ProjectGenre:
+			case FLEvent.ProjectAuthor:
 			case FLEvent.RemoteCtrlFormula:
-			case FLEvent.ChanGroupName:
-			case FLEvent.PLTrackName:
-			case FLEvent.Unk_241:
+			case FLEvent.ChanFilterName:
+			case FLEvent.PlaylistTrackName:
+			case FLEvent.PlaylistArrangementName:
 				return true;
 		}
 		return false;

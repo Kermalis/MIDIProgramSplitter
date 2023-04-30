@@ -99,15 +99,15 @@ internal sealed class FLChannel
 
 	public void Write(EndianBinaryWriter w, int i, uint filterNum)
 	{
-		FLProject.WriteWordEvent(w, FLEvent.NewChan, (ushort)i);
-		FLProject.WriteByteEvent(w, FLEvent.ChanType, (byte)FLChanType.Osc3x_MIDIOut);
+		FLProject.WriteWordEvent(w, FLEvent.NewChannel, (ushort)i);
+		FLProject.WriteByteEvent(w, FLEvent.ChannelType, (byte)FLChanType.Osc3x_MIDIOut);
 		FLProject.WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "MIDI Out\0");
 		FLProject.WriteBytesEventWithLength(w, FLEvent.NewPlugin, NewPlugin_DeselectedTopLeft);
 		FLProject.WriteUTF16EventWithLength(w, FLEvent.PluginName, Name + '\0');
 		FLProject.WriteDWordEvent(w, FLEvent.PluginIcon, 0);
 		FLProject.WriteDWordEvent(w, FLEvent.Color, 0x73725E);
 		WritePluginParams(w);
-		FLProject.WriteByteEvent(w, FLEvent.ChanEnabled, 1);
+		FLProject.WriteByteEvent(w, FLEvent.ChannelIsEnabled, 1);
 		FLProject.WriteBytesEventWithLength(w, FLEvent.Delay, Delay);
 		FLProject.WriteDWordEvent(w, FLEvent.DelayReso, 0x800_080);
 		FLProject.WriteDWordEvent(w, FLEvent.Reverb, 0x10_000);
@@ -129,18 +129,18 @@ internal sealed class FLChannel
 		FLProject.WriteBytesEventWithLength(w, FLEvent.ChanPoly, ChanPoly);
 		WriteChanParams(w, i);
 		FLProject.WriteDWordEvent(w, FLEvent.CutCutBy, (uint)(i + 1) * 0x10_001u); // Why lol
-		FLProject.WriteDWordEvent(w, FLEvent.LayerFlags, 0);
+		FLProject.WriteDWordEvent(w, FLEvent.ChannelLayerFlags, 0);
 		FLProject.WriteDWordEvent(w, FLEvent.ChanFilterNum, filterNum);
 		FLProject.WriteByteEvent(w, FLEvent.Unk_32, 0);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.Tracking, Tracking0);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.Tracking, Tracking1);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.Envelope, EnvelopeOther);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.Envelope, Envelope1);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.Envelope, EnvelopeOther);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.Envelope, EnvelopeOther);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.Envelope, EnvelopeOther);
-		FLProject.WriteDWordEvent(w, FLEvent.SampleFlags, 0b1010);
-		FLProject.WriteByteEvent(w, FLEvent.LoopType, 0);
+		FLProject.WriteBytesEventWithLength(w, FLEvent.ChannelTracking, Tracking0);
+		FLProject.WriteBytesEventWithLength(w, FLEvent.ChannelTracking, Tracking1);
+		FLProject.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, EnvelopeOther);
+		FLProject.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, Envelope1);
+		FLProject.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, EnvelopeOther);
+		FLProject.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, EnvelopeOther);
+		FLProject.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, EnvelopeOther);
+		FLProject.WriteDWordEvent(w, FLEvent.ChannelSampleFlags, 0b1010);
+		FLProject.WriteByteEvent(w, FLEvent.ChannelLoopType, 0);
 	}
 	private void WritePluginParams(EndianBinaryWriter w)
 	{
@@ -154,7 +154,7 @@ internal sealed class FLChannel
 	}
 	private static void WriteChanParams(EndianBinaryWriter w, int i)
 	{
-		w.WriteEnum(FLEvent.ChanParams);
+		w.WriteEnum(FLEvent.ChannelParams);
 		FLProject.WriteTextEventLength(w, 168);
 		w.WriteBytes(ChanParamsPart1);
 		w.WriteByte((byte)i);

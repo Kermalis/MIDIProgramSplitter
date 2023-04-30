@@ -15,7 +15,7 @@ internal struct FLPlaylistTrack
 
 	public static void Write(EndianBinaryWriter w, int i)
 	{
-		w.WriteEnum(FLEvent.PLTrackInfo);
+		w.WriteEnum(FLEvent.NewPlaylistTrack);
 		FLProject.WriteTextEventLength(w, 66);
 		w.WriteUInt16((ushort)(i + 1));
 		w.WriteBytes(Part1);

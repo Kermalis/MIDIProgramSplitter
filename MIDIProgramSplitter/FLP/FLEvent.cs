@@ -3,21 +3,21 @@
 internal enum FLEvent : byte
 {
 	// BYTE EVENTS
-	ChanEnabled = 0x00,
+	ChannelIsEnabled = 0x00,
 	NoteOn,
-	ChanVol,
-	ChanPan,
+	ChannelVolume,
+	ChannelPanpot,
 	MIDIChan,
 	MIDINote,
 	MIDIPatch,
 	MIDIBank,
 	// 8
+	/// <summary>0 for pattern mode, 1 for song mode</summary>
+	IsSongMode = 9,
 	/// <summary>0 or 1</summary>
-	LoopActive = 9,
-	/// <summary>0 or 1</summary>
-	ShowInfo,
+	ShouldShowInfoOnOpen,
 	Shuffle,
-	MainVol,
+	MainVolume,
 	FitToSteps,
 	Pitchable,
 	Zipped,
@@ -27,36 +27,35 @@ internal enum FLEvent : byte
 	/// <summary>Value like 4</summary>
 	TimeSigDenominator,
 	UseLoopPoints,
-	LoopType,
-	ChanType,
+	ChannelLoopType,
+	ChannelType,
 	TargetFXTrack,
-	/// <summary>Value = 0</summary>
-	PanVolumeTab,
+	/// <summary>0 for circular, 2 for triangular</summary>
+	PanningLaw,
 	NStepsShown,
 	SSLength,
 	SSLoop,
 	FXProps,
 	IsRegistered,
 	APDC,
-	/// <summary>0 or 1</summary>
-	TruncateClipNotes,
+	ShouldPlayTruncatedClipNotes,
 	EEAutoMode,
 	Unk_32, // 0
 	Unk_33, // 4
 	Unk_34, // 4
-	Unk_35, // 1
+	/// <summary>0 for original FL timing, 1 for traditional time signatures</summary>
+	ShouldUseTimeSignatures,
 	Unk_36, // 0
 	Unk_37, // 1
 	Unk_38, // 1
 	Unk_39, // 0
-	Unk_40, // 0
+	ShouldCutNotesFast,
 
 	// WORD EVENTS
-	NewChan = 0x40,
-	NewPat,
+	NewChannel = 0x40,
+	NewPattern,
 	Tempo,
-	/// <summary>Value like 0x100</summary>
-	CurrentPatNum,
+	CurPatternNum,
 	PatData,
 	FX,
 	Fade_Stereo,
@@ -69,7 +68,8 @@ internal enum FLEvent : byte
 	DotNote,
 	DotPitch,
 	DotMix,
-	MainPitch,
+	/// <summary>-1200 to 1200. 0 default</summary>
+	MasterPitch,
 	RandChan,
 	MixChan,
 	Resonance,
@@ -88,12 +88,12 @@ internal enum FLEvent : byte
 	DotRel,
 	SwingMix,
 	Unk_98, // 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-	Unk_99, // 0
-	Unk_100, // 0
+	NewArrangement,
+	CurArrangementNum,
 
 	// DWORD EVENTS
 	Color = 0x80,
-	PlayListItem,
+	PlaylistItem,
 	Echo,
 	FXSine,
 	CutCutBy,
@@ -108,8 +108,8 @@ internal enum FLEvent : byte
 	StretchTime,
 	SSNote,
 	FineTune,
-	SampleFlags,
-	LayerFlags,
+	ChannelSampleFlags,
+	ChannelLayerFlags,
 	ChanFilterNum,
 	CurFilterNum,
 	/// <summary>FX track output channel - 0xFFFFFFFF for none</summary>
@@ -128,25 +128,22 @@ internal enum FLEvent : byte
 	FineTempo,
 	Unk_157, // 0xFFFFFFFF
 	Unk_158, // 0xFFFFFFFF
-	Unk_159, // 2963
+	VersionBuildNumber,
 	Unk_164 = 164, // 0
 	Unk_165, // 3
 	Unk_166, // 1
 
 	// TEXT EVENTS
-	ChanName = 0xC0, // Name for the current channel
-	PatName, // Name for the current pattern
-	Title, // Title of the loop
-	/// <summary>Old comments in text format. Not used anymore</summary>
-	Comment,
+	ChannelName = 0xC0,
+	PatternName,
+	ProjectTitle,
+	ProjectComment,
 	/// <summary>Filename for the sample in the current channel, stored as relative path</summary>
 	SampleFileName,
-	URL,
+	ProjectURL,
 	/// <summary>New comments in Rich Text format</summary>
-	CommentRTF,
-	/// <summary>Text like "20.8.3.2304."</summary>
+	ProjectCommentRTF,
 	Version,
-	/// <summary>Text like "d3@?4xufs49p1n?B>;?889"</summary>
 	RegistrationID,
 	/// <summary>Plugin file name (without path)</summary>
 	DefPluginName,
@@ -154,10 +151,9 @@ internal enum FLEvent : byte
 	/// <summary>Plugin's name</summary>
 	PluginName,
 	FXName,
-	/// <summary>Time marker name</summary>
-	TimeMarker,
-	Genre,
-	Author,
+	TimeMarkerName,
+	ProjectGenre,
+	ProjectAuthor,
 	MIDICtrls,
 	Delay,
 	TS404Params,
@@ -166,13 +162,12 @@ internal enum FLEvent : byte
 	PluginParams,
 	/// <summary>Used once for testing</summary>
 	Reserved2,
-	/// <summary>Block of various channel params (can grow)</summary>
-	ChanParams,
+	ChannelParams,
 	/// <summary>Automated controller events</summary>
 	CtrlRecChan,
 	/// <summary>Selection in playlist</summary>
-	PLSel,
-	Envelope,
+	PlaylistSelection,
+	ChannelEnvelope,
 	BasicChanParams,
 	OldFilterParams,
 	ChanPoly,
@@ -186,24 +181,24 @@ internal enum FLEvent : byte
 	/// <summary>Remote control entry (internal)</summary>
 	RemoteCtrl_Int,
 	/// <summary>Vol/kb tracking</summary>
-	Tracking,
+	ChannelTracking,
 	/// <summary>Levels offset</summary>
 	ChanOfsLevels,
 	/// <summary>Remote control entry formula</summary>
 	RemoteCtrlFormula,
 	/// <summary>Value like "Audio" or "Unsorted"</summary>
-	ChanGroupName,
+	ChanFilterName,
 	RegBlackList,
-	PlayListItems,
+	PlaylistItems,
 	/// <summary>Channel articulator</summary>
 	ChanAC,
 	FXRouting,
 	FXParams,
 	/// <summary>Value like: 10 DF D7 ED 3B A4 E5 40 00 00 00 E0 C9 BE 32 3F</summary>
 	ProjectTime,
-	PLTrackInfo,
-	PLTrackName,
-	Unk_241 = 241, // 24 len
+	NewPlaylistTrack,
+	PlaylistTrackName,
+	PlaylistArrangementName = 241,
 
 	MAX
 }

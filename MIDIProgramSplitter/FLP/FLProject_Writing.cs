@@ -15,8 +15,9 @@ partial class FLProject
 	private static ReadOnlySpan<byte> RemoteCtrl_MIDI2 => new byte[20] { 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0xFF, 0x0F, 0x04, 0x00, 0x00, 0x00, 0x00, 0xFE, 0xFF, 0xFF };
 	private static ReadOnlySpan<byte> RemoteCtrl_Int => new byte[20] { 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0xD5, 0x01, 0x00, 0x00 };
 
-	// Probably the border between inserts. 0x44 if Insert1 is muted. 0x4C 0x04 if unmuted and separator
+	// 0x0C if unmuted, 0x04 if muted.
 	private static ReadOnlySpan<byte> FXParams_Insert0And125 => new byte[12] { 0x00, 0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	// 0x44 0x00 if Insert1 is muted. 0x4C 0x04 if unmuted and separator
 	private static ReadOnlySpan<byte> FXParams_Insert1Through124 => new byte[12] { 0x00, 0x00, 0x00, 0x00, 0x4C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 	private static ReadOnlySpan<byte> FruityLSD_PluginParams => new byte[97]
@@ -47,18 +48,24 @@ partial class FLProject
 		0x00, 0x00, 0x00, 0x00
 	};
 
+	// 56364 bytes
+	// _initCtrlRecChan[9] is MainVolume. 50% => 25, 100% => 50, 125% => 62
+	// Insert volumes are stored in here as well.
 	private static readonly byte[] _initCtrlRecChan = File.ReadAllBytes("../../../../InitCtrlRecChan.bin");
 
 	public static void Write(Stream s, ReadOnlySpan<FLChannel> channels, ReadOnlySpan<FLAutomation> automations, ReadOnlySpan<FLPattern> patterns, ReadOnlySpan<FLPlaylistItem> playlistItems,
-		ushort ppqn = 96 / 4)
+		ushort ppqn = 96)
 	{
 		var w = new EndianBinaryWriter(s, ascii: true);
 
+		// Header chunk
 		w.WriteChars("FLhd");
-		w.WriteUInt32(6);
-		w.WriteUInt16(0);
-		w.WriteUInt16((ushort)channels.Length);
+		w.WriteUInt32(6); // Length
+		w.WriteUInt16(0); // Format
+		w.WriteUInt16((ushort)(channels.Length + automations.Length));
 		w.WriteUInt16(ppqn);
+
+		// Data chunk
 		w.WriteChars("FLdt");
 
 		long dataLenOffset = s.Position;
@@ -70,7 +77,8 @@ partial class FLProject
 		{
 			channels[i].Write(w, i, chanFilter);
 		}
-		WriteNonsense(w, playlistItems);
+		WriteArrangement(w, 0, playlistItems);
+		WriteMoreStuffIDK(w);
 		WriteInsertMaster(w);
 		WriteInsert1(w);
 		for (int i = 0; i < 125; i++)
@@ -79,7 +87,7 @@ partial class FLProject
 		}
 		WriteEnding(w);
 
-		// Write length
+		// Write data chunk length
 		uint length = (uint)(s.Length - (dataLenOffset + 4));
 		s.Position = dataLenOffset;
 		w.WriteUInt32(length);
@@ -133,50 +141,33 @@ partial class FLProject
 	private static void WriteProjectInfo(EndianBinaryWriter w, ReadOnlySpan<FLAutomation> automations, ReadOnlySpan<FLPattern> patterns)
 	{
 		WriteUTF8EventWithLength(w, FLEvent.Version, "20.9.2.2963\0");
-		WriteDWordEvent(w, FLEvent.Unk_159, 2963);
-		WriteByteEvent(w, FLEvent.IsRegistered, 1);
-		WriteByteEvent(w, FLEvent.Unk_37, 1);
-		WriteUTF16EventWithLength(w, FLEvent.RegistrationID, "d3@?4xufs49p1n?B>;?889\0");
+		WriteDWordEvent(w, FLEvent.VersionBuildNumber, 2963);
+		WriteByteEvent(w, FLEvent.IsRegistered, 1); // TODO: Probably should make it 0 to avoid legal trouble? How does it authenticate this?
+		WriteByteEvent(w, FLEvent.Unk_37, 1); // Authentication related too?
+		WriteUTF16EventWithLength(w, FLEvent.RegistrationID, "d3@?4xufs49p1n?B>;?889\0"); // Probably shouldn't include this?
+
 		WriteDWordEvent(w, FLEvent.FineTempo, 140_000); // 140 BPM
-		WriteWordEvent(w, FLEvent.CurrentPatNum, 1);
-		WriteByteEvent(w, FLEvent.LoopActive, 1);
+		WriteWordEvent(w, FLEvent.CurPatternNum, 1);
+		WriteByteEvent(w, FLEvent.IsSongMode, 1);
 		WriteByteEvent(w, FLEvent.Shuffle, 0);
-		WriteWordEvent(w, FLEvent.MainPitch, 0);
+		WriteWordEvent(w, FLEvent.MasterPitch, 0);
 		WriteByteEvent(w, FLEvent.TimeSigNumerator, 4);
 		WriteByteEvent(w, FLEvent.TimeSigDenominator, 4);
-		WriteByteEvent(w, FLEvent.Unk_35, 1);
-		WriteByteEvent(w, FLEvent.PanVolumeTab, 0);
-		WriteByteEvent(w, FLEvent.TruncateClipNotes, 1);
-		WriteByteEvent(w, FLEvent.ShowInfo, 0);
-		WriteUTF16EventWithLength(w, FLEvent.Title, "\0");
-		WriteUTF16EventWithLength(w, FLEvent.Genre, "\0");
-		WriteUTF16EventWithLength(w, FLEvent.Author, "\0");
+		WriteByteEvent(w, FLEvent.ShouldUseTimeSignatures, 1);
+		WriteByteEvent(w, FLEvent.PanningLaw, 0); // Circular
+		WriteByteEvent(w, FLEvent.ShouldPlayTruncatedClipNotes, 1);
+		WriteByteEvent(w, FLEvent.ShouldShowInfoOnOpen, 0);
+		WriteUTF16EventWithLength(w, FLEvent.ProjectTitle, "\0");
+		WriteUTF16EventWithLength(w, FLEvent.ProjectGenre, "\0");
+		WriteUTF16EventWithLength(w, FLEvent.ProjectAuthor, "\0");
 		WriteUTF16EventWithLength(w, FLEvent.ProjectDataPath, "\0");
-		WriteUTF16EventWithLength(w, FLEvent.Comment, "\0");
+		WriteUTF16EventWithLength(w, FLEvent.ProjectComment, "\0");
+		// ProjectURL would go here
 		WriteBytesEventWithLength(w, FLEvent.ProjectTime, ProjectTime_Default);
-		if (automations.Length == 0)
-		{
-			WriteUTF16EventWithLength(w, FLEvent.ChanGroupName, "Unsorted\0");
-			WriteDWordEvent(w, FLEvent.CurFilterNum, 0);
-		}
-		else
-		{
-			WriteUTF16EventWithLength(w, FLEvent.ChanGroupName, "Automation\0");
-			WriteUTF16EventWithLength(w, FLEvent.ChanGroupName, "Unsorted\0");
-			WriteDWordEvent(w, FLEvent.CurFilterNum, 1);
-		}
-		if (patterns.Length == 0)
-		{
-			WriteBytesEventWithLength(w, FLEvent.CtrlRecChan, Array.Empty<byte>());
-		}
-		else
-		{
-			for (int i = 0; i < patterns.Length; i++)
-			{
-				WriteWordEvent(w, FLEvent.NewPat, (ushort)(i + 1));
-				patterns[i].WritePatternNotes(w);
-			}
-		}
+
+		WriteChanFilters(w, automations.Length != 0);
+		WritePatterns(w, patterns);
+
 		WriteBytesEventWithLength(w, FLEvent.RemoteCtrl_MIDI, RemoteCtrl_MIDI0);
 		WriteBytesEventWithLength(w, FLEvent.RemoteCtrl_MIDI, RemoteCtrl_MIDI1);
 		WriteBytesEventWithLength(w, FLEvent.RemoteCtrl_MIDI, RemoteCtrl_MIDI2);
@@ -185,31 +176,70 @@ partial class FLProject
 			WriteBytesEventWithLength(w, FLEvent.RemoteCtrl_Int, RemoteCtrl_Int);
 		}
 	}
-	private static void WriteNonsense(EndianBinaryWriter w, ReadOnlySpan<FLPlaylistItem> playlistItems)
+	private static void WriteChanFilters(EndianBinaryWriter w, bool hasAutomations)
 	{
-		WriteWordEvent(w, FLEvent.Unk_99, 0);
-		WriteUTF16EventWithLength(w, FLEvent.Unk_241, "Arrangement\0");
+		if (hasAutomations)
+		{
+			WriteUTF16EventWithLength(w, FLEvent.ChanFilterName, "Automation\0");
+			WriteUTF16EventWithLength(w, FLEvent.ChanFilterName, "Unsorted\0");
+			WriteDWordEvent(w, FLEvent.CurFilterNum, 1);
+		}
+		else
+		{
+			WriteUTF16EventWithLength(w, FLEvent.ChanFilterName, "Unsorted\0");
+			WriteDWordEvent(w, FLEvent.CurFilterNum, 0);
+		}
+	}
+	private static void WritePatterns(EndianBinaryWriter w, ReadOnlySpan<FLPattern> patterns)
+	{
+		if (patterns.Length == 0)
+		{
+			WriteBytesEventWithLength(w, FLEvent.CtrlRecChan, Array.Empty<byte>());
+		}
+		else
+		{
+			// TODO: Why did this CtrlRecChan only show up sometimes?
+			// Bytes: CtrlRecChan - 12 = [0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x19, 0x00, 0x00]
+			for (int i = 0; i < patterns.Length; i++)
+			{
+				WriteWordEvent(w, FLEvent.NewPattern, (ushort)(i + 1));
+				patterns[i].WritePatternNotes(w);
+			}
+		}
+	}
+	private static void WriteArrangement(EndianBinaryWriter w, ushort arrangementIndex, ReadOnlySpan<FLPlaylistItem> playlistItems)
+	{
+		WriteWordEvent(w, FLEvent.NewArrangement, arrangementIndex);
+		WriteUTF16EventWithLength(w, FLEvent.PlaylistArrangementName, "Arrangement\0");
 		WriteByteEvent(w, FLEvent.Unk_36, 0);
-		w.WriteEnum(FLEvent.PlayListItems);
+
+		// Playlist Items
+		w.WriteEnum(FLEvent.PlaylistItems);
 		WriteTextEventLength(w, (uint)playlistItems.Length * FLPlaylistItem.LEN);
 		foreach (FLPlaylistItem item in playlistItems)
 		{
 			item.Write(w);
 		}
+
+		// Playlist Tracks
 		for (int i = 0; i < 500; i++)
 		{
 			FLPlaylistTrack.Write(w, i);
 		}
-		WriteWordEvent(w, FLEvent.Unk_100, 0);
+	}
+	private static void WriteMoreStuffIDK(EndianBinaryWriter w)
+	{
+		WriteWordEvent(w, FLEvent.CurArrangementNum, 0);
 		WriteByteEvent(w, FLEvent.APDC, 1);
 		WriteByteEvent(w, FLEvent.Unk_39, 1);
-		WriteByteEvent(w, FLEvent.Unk_40, 0);
+		WriteByteEvent(w, FLEvent.ShouldCutNotesFast, 0);
 		WriteByteEvent(w, FLEvent.EEAutoMode, 0);
 		WriteByteEvent(w, FLEvent.Unk_38, 1);
 	}
 	private static void WriteInsertMaster(EndianBinaryWriter w)
 	{
 		WriteBytesEventWithLength(w, FLEvent.FXParams, FXParams_Insert0And125);
+
 		WriteWordEvent(w, FLEvent.Unk_98, 0);
 		WriteWordEvent(w, FLEvent.Unk_98, 1);
 		WriteWordEvent(w, FLEvent.Unk_98, 2);
@@ -229,11 +259,13 @@ partial class FLProject
 	private static void WriteInsert1(EndianBinaryWriter w)
 	{
 		WriteBytesEventWithLength(w, FLEvent.FXParams, FXParams_Insert1Through124);
+
 		WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "Fruity LSD\0");
 		WriteBytesEventWithLength(w, FLEvent.NewPlugin, FruityLSD_NewPlugin);
 		WriteDWordEvent(w, FLEvent.PluginIcon, 0);
 		WriteDWordEvent(w, FLEvent.Color, 0x565148);
 		WriteBytesEventWithLength(w, FLEvent.PluginParams, FruityLSD_PluginParams);
+
 		WriteWordEvent(w, FLEvent.Unk_98, 0);
 		WriteWordEvent(w, FLEvent.Unk_98, 1);
 		WriteWordEvent(w, FLEvent.Unk_98, 2);
@@ -253,6 +285,7 @@ partial class FLProject
 	private static void WriteInsert2Through124(EndianBinaryWriter w)
 	{
 		WriteBytesEventWithLength(w, FLEvent.FXParams, FXParams_Insert1Through124);
+
 		WriteWordEvent(w, FLEvent.Unk_98, 0);
 		WriteWordEvent(w, FLEvent.Unk_98, 1);
 		WriteWordEvent(w, FLEvent.Unk_98, 2);
@@ -272,6 +305,7 @@ partial class FLProject
 	private static void WriteInsert125(EndianBinaryWriter w)
 	{
 		WriteBytesEventWithLength(w, FLEvent.FXParams, FXParams_Insert0And125);
+
 		WriteWordEvent(w, FLEvent.Unk_98, 0);
 		WriteWordEvent(w, FLEvent.Unk_98, 1);
 		WriteWordEvent(w, FLEvent.Unk_98, 2);
