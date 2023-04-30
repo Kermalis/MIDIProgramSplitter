@@ -74,6 +74,8 @@ partial class FLProject
 		WriteChannels(w, ppqn, channels, automations);
 		WriteArrangement(w, 0, playlistItems);
 		WriteMoreStuffIDK(w);
+		// TODO: For some reason, "Current" is docked to "middle" instead of "left".
+		// For some other reason, it is sending 100% of current to master, making selected inserts louder...
 		WriteInsertMaster(w);
 		WriteInsert1(w);
 		for (int i = 0; i < 125; i++)
