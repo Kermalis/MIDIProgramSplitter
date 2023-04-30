@@ -20,16 +20,13 @@ partial class FLAutomation
 			// Delta ticks in quarter bars
 			if (isLast)
 			{
-				//w.WriteDouble(double.NaN); // TODO: Use special nan FL uses?
-				w.WriteUInt64(0xFFFFFFFF00000001);
+				w.WriteUInt64(0xFFFFFFFF00000001); // Special NaN for some reason
 			}
 			else
 			{
 				// Do Delta ticks for the previous point here.
 				uint deltaTicks = nextPointAbsoluteTicks - AbsoluteTicks;
-				double d = deltaTicks / ppqn;
-				d *= 4;
-				w.WriteDouble(d); // TODO: Check
+				w.WriteDouble(deltaTicks / (double)ppqn);
 			}
 		}
 	}
