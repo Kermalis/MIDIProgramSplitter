@@ -14,6 +14,7 @@ internal sealed partial class FLAutomation
 		Panpot,
 		Pitch,
 		MIDIProgram,
+		Tempo,
 	}
 
 	private const int TWO_POINT_LEN = 181;
@@ -50,74 +51,118 @@ internal sealed partial class FLAutomation
 
 	public readonly string Name;
 	public readonly MyType Type;
-	public readonly FLChannel Target;
+	/// <summary>Only null for Tempo</summary>
+	public readonly List<FLChannel>? Targets;
 	public readonly List<Point> Points;
 
-	public FLAutomation(string name, MyType type, FLChannel target)
+	public FLAutomation(string name, MyType type, List<FLChannel>? targets)
 	{
 		Name = name;
 		Type = type;
-		Target = target;
+		Targets = targets;
 		Points = new List<Point>();
+	}
+
+	public void AddPoint(uint ticks, double value)
+	{
+		Points.Add(new Point
+		{
+			AbsoluteTicks = ticks,
+			Value = value,
+		});
+	}
+	public void AddTempoPoint(uint ticks, decimal bpm)
+	{
+		// Default min/max (10%/33%): 60 is 0.0d, 120 is 0.5d, 140 is 0.6666666865348816d, 180 is 1.0d
+		// Min/Max 0%/100%: 0.0d is 10, 0.5d is 266, 1.0d is 522
+
+		AddPoint(ticks, (double)Utils.LerpUnclamped(10, 522, 0, 1, bpm));
+	}
+	public void PadPoints(uint targetTicks, double defaultValue)
+	{
+		if (Points.Count == 0)
+		{
+			throw new Exception();
+		}
+
+		// Make sure there's a point at 0
+		Point firstPoint = Points[0];
+		if (firstPoint.AbsoluteTicks != 0)
+		{
+			Points.Insert(0, new Point
+			{
+				AbsoluteTicks = 0,
+				Value = defaultValue,
+			});
+		}
+
+		// Make sure there's a point at targetTicks
+		Point lastPoint = Points[Points.Count - 1];
+		if (lastPoint.AbsoluteTicks != targetTicks)
+		{
+			AddPoint(targetTicks, lastPoint.Value);
+		}
+	}
+	public void PadTempoPoints(uint targetTicks, double defaultTempo)
+	{
+		PadPoints(targetTicks, Utils.LerpUnclamped(10, 522, 0, 1, defaultTempo));
 	}
 
 	public void Write(EndianBinaryWriter w, ushort id, uint filterNum, uint ppqn)
 	{
-		FLProject.WriteWordEvent(w, FLEvent.NewChannel, id);
-		FLProject.WriteByteEvent(w, FLEvent.ChannelType, (byte)FLChanType.Automation);
-		FLProject.WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "\0");
-		FLProject.WriteBytesEventWithLength(w, FLEvent.NewPlugin, NewPlugin_DeselectedTopLeft);
-		FLProject.WriteUTF16EventWithLength(w, FLEvent.PluginName, Name + '\0');
-		FLProject.WriteDWordEvent(w, FLEvent.PluginIcon, 0);
-		FLProject.WriteDWordEvent(w, FLEvent.Color, 0x60608E);
-		FLProject.WriteByteEvent(w, FLEvent.ChannelIsEnabled, 1);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.Delay, FLChannel.Delay);
-		FLProject.WriteDWordEvent(w, FLEvent.DelayReso, 0x800_080);
-		FLProject.WriteDWordEvent(w, FLEvent.Reverb, 0x10_000);
-		FLProject.WriteWordEvent(w, FLEvent.ShiftDelay, 0);
-		FLProject.WriteWordEvent(w, FLEvent.SwingMix, 0x80);
-		FLProject.WriteWordEvent(w, FLEvent.FX, 0x80);
-		FLProject.WriteWordEvent(w, FLEvent.FX3, 0x100);
-		FLProject.WriteWordEvent(w, FLEvent.CutOff, 0x400);
-		FLProject.WriteWordEvent(w, FLEvent.Resonance, 0);
-		FLProject.WriteWordEvent(w, FLEvent.PreAmp, 0);
-		FLProject.WriteWordEvent(w, FLEvent.Decay, 0);
-		FLProject.WriteWordEvent(w, FLEvent.Attack, 0);
-		FLProject.WriteWordEvent(w, FLEvent.StDel, 0x800);
-		FLProject.WriteDWordEvent(w, FLEvent.FXSine, 0x800_000);
-		FLProject.WriteWordEvent(w, FLEvent.Fade_Stereo, 0);
-		FLProject.WriteByteEvent(w, FLEvent.TargetFXTrack, 0);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.BasicChanParams, BasicChanParams);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.ChanOfsLevels, FLChannel.ChanOfsLevels);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.ChanPoly, ChanPoly);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.ChannelParams, ChanParams);
-		FLProject.WriteDWordEvent(w, FLEvent.CutCutBy, 0);
-		FLProject.WriteDWordEvent(w, FLEvent.ChannelLayerFlags, 0);
-		FLProject.WriteDWordEvent(w, FLEvent.ChanFilterNum, filterNum);
+		FLProjectWriter.WriteWordEvent(w, FLEvent.NewChannel, id);
+		FLProjectWriter.WriteByteEvent(w, FLEvent.ChannelType, (byte)FLChanType.Automation);
+		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "\0");
+		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.NewPlugin, NewPlugin_DeselectedTopLeft);
+		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PluginName, Name + '\0');
+		FLProjectWriter.WriteDWordEvent(w, FLEvent.PluginIcon, 0);
+		FLProjectWriter.WriteDWordEvent(w, FLEvent.Color, 0x60608E);
+		FLProjectWriter.WriteByteEvent(w, FLEvent.ChannelIsEnabled, 1);
+		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.Delay, FLChannel.Delay);
+		FLProjectWriter.WriteDWordEvent(w, FLEvent.DelayReso, 0x800_080);
+		FLProjectWriter.WriteDWordEvent(w, FLEvent.Reverb, 0x10_000);
+		FLProjectWriter.WriteWordEvent(w, FLEvent.ShiftDelay, 0);
+		FLProjectWriter.WriteWordEvent(w, FLEvent.SwingMix, 0x80);
+		FLProjectWriter.WriteWordEvent(w, FLEvent.FX, 0x80);
+		FLProjectWriter.WriteWordEvent(w, FLEvent.FX3, 0x100);
+		FLProjectWriter.WriteWordEvent(w, FLEvent.CutOff, 0x400);
+		FLProjectWriter.WriteWordEvent(w, FLEvent.Resonance, 0);
+		FLProjectWriter.WriteWordEvent(w, FLEvent.PreAmp, 0);
+		FLProjectWriter.WriteWordEvent(w, FLEvent.Decay, 0);
+		FLProjectWriter.WriteWordEvent(w, FLEvent.Attack, 0);
+		FLProjectWriter.WriteWordEvent(w, FLEvent.StDel, 0x800);
+		FLProjectWriter.WriteDWordEvent(w, FLEvent.FXSine, 0x800_000);
+		FLProjectWriter.WriteWordEvent(w, FLEvent.Fade_Stereo, 0);
+		FLProjectWriter.WriteByteEvent(w, FLEvent.TargetFXTrack, 0);
+		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.BasicChanParams, BasicChanParams);
+		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChanOfsLevels, FLChannel.ChanOfsLevels);
+		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChanPoly, ChanPoly);
+		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelParams, ChanParams);
+		FLProjectWriter.WriteDWordEvent(w, FLEvent.CutCutBy, 0);
+		FLProjectWriter.WriteDWordEvent(w, FLEvent.ChannelLayerFlags, 0);
+		FLProjectWriter.WriteDWordEvent(w, FLEvent.ChanFilterNum, filterNum);
 		WriteData(w, ppqn);
-		FLProject.WriteByteEvent(w, FLEvent.Unk_32, 0);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.ChannelTracking, FLChannel.Tracking0);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.ChannelTracking, FLChannel.Tracking1);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.Envelope1);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
-		FLProject.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
-		FLProject.WriteDWordEvent(w, FLEvent.ChannelSampleFlags, 0b0011);
-		FLProject.WriteByteEvent(w, FLEvent.ChannelLoopType, 0);
+		FLProjectWriter.WriteByteEvent(w, FLEvent.Unk_32, 0);
+		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelTracking, FLChannel.Tracking0);
+		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelTracking, FLChannel.Tracking1);
+		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
+		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.Envelope1);
+		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
+		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
+		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
+		FLProjectWriter.WriteDWordEvent(w, FLEvent.ChannelSampleFlags, 0b0011);
+		FLProjectWriter.WriteByteEvent(w, FLEvent.ChannelLoopType, 0);
 	}
 	private void WriteData(EndianBinaryWriter w, uint ppqn)
 	{
 		w.WriteEnum(FLEvent.AutomationData);
 
 		uint numPoints = (uint)Points.Count;
-		FLProject.WriteTextEventLength(w, NO_POINT_LEN + (numPoints * Point.LEN));
-
-		byte type = 0; // TODO: Type
+		FLProjectWriter.WriteTextEventLength(w, NO_POINT_LEN + (numPoints * Point.LEN));
 
 		w.WriteUInt32(1);
 		w.WriteUInt32(0x40);
-		w.WriteByte(type);
+		w.WriteByte(MyTypeToAutoType(Type));
 		w.WriteUInt32(4);
 		w.WriteUInt32(3);
 		w.WriteUInt32(numPoints);
@@ -156,37 +201,55 @@ internal sealed partial class FLAutomation
 		w.WriteUInt32(0);
 		w.WriteUInt32(0);
 	}
-	public void WriteAutomationConnection(EndianBinaryWriter w, ushort automationChannelID, ReadOnlySpan<FLChannel> channels)
+	public void WriteAutomationConnection(EndianBinaryWriter w, ushort automationChannelID, List<FLChannel> channels)
+	{
+		if (Type == MyType.Tempo)
+		{
+			WriteAutomationConnection(w, automationChannelID, 0x4000);
+		}
+		else
+		{
+			foreach (FLChannel target in Targets!)
+			{
+				WriteAutomationConnection(w, automationChannelID, (ushort)channels.IndexOf(target));
+			}
+		}
+	}
+	private void WriteAutomationConnection(EndianBinaryWriter w, ushort automationChannelID, ushort targetID)
 	{
 		w.WriteEnum(FLEvent.AutomationConnection);
-		FLProject.WriteTextEventLength(w, 20);
+		FLProjectWriter.WriteTextEventLength(w, 20);
 
 		w.WriteUInt16(0);
 		w.WriteUInt16(automationChannelID);
 		w.WriteUInt32(0);
-		w.WriteUInt16(MyTypeToFLType(Type));
-		w.WriteUInt16((ushort)GetTargetChannelID(channels));
+		w.WriteUInt16(MyTypeToConnectionType(Type));
+		w.WriteUInt16(targetID);
 		w.WriteUInt32(8);
 		w.WriteUInt32(0x1D5);
 	}
-	private int GetTargetChannelID(ReadOnlySpan<FLChannel> channels)
+	private static byte MyTypeToAutoType(MyType t)
 	{
-		for (int i = 0; i < channels.Length; i++)
+		switch (t)
 		{
-			if (channels[i] == Target)
-			{
-				return i;
-			}
+			case MyType.Volume:
+			case MyType.MIDIProgram:
+			case MyType.Tempo:
+				return 0;
+			case MyType.Panpot:
+			case MyType.Pitch:
+				return 1;
 		}
-		throw new Exception();
+		throw new ArgumentOutOfRangeException(nameof(t), t, null);
 	}
-	private static ushort MyTypeToFLType(MyType t)
+	private static ushort MyTypeToConnectionType(MyType t)
 	{
 		switch (t)
 		{
 			case MyType.Volume: return 0x0000;
 			case MyType.Panpot: return 0x0001;
 			case MyType.Pitch: return 0x0004;
+			case MyType.Tempo: return 0x0005;
 			case MyType.MIDIProgram: return 0x8000;
 		}
 		throw new ArgumentOutOfRangeException(nameof(t), t, null);
@@ -234,7 +297,7 @@ internal sealed partial class FLAutomation
 			}
 
 			str.AppendLine();
-			WriteLocE1("0 for vol/gminstrument, 1 for pan/pitch");
+			WriteLocE1("0 for vol/gminstrument/tempo, 1 for pan/pitch");
 			byte type = r.ReadByte();
 			str.AppendLine($" 0x{type:X2},");
 			if (type is not 0 and not 1)

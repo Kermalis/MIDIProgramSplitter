@@ -1,4 +1,5 @@
 ﻿using Kermalis.EndianBinaryIO;
+using System.Collections.Generic;
 
 namespace MIDIProgramSplitter.FLP;
 
@@ -19,7 +20,7 @@ internal sealed class FLPlaylistItem
 	// @20 ? Always 0x40
 	// @21 ? Always 0x64
 	// @22-23 ? Always 0x8080
-	// @24-31 ? All 0xFF for patterns, 0xBF800000 0xBF800000 for automations
+	// @24-31 ? All 0xFF for patterns, 0xBF800000 (-1f) 0xBF800000 for automations
 
 	// Pat1 at track0 1:01:00
 	// [0x00, 0x00, 0x00, 0x00, 0x00, 0x50, 0x01, 0x50, // 00-07
@@ -49,18 +50,45 @@ internal sealed class FLPlaylistItem
 	//  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
 
 	public uint AbsoluteTick;
-	public byte Pattern1Indexed;
+	public FLPattern? Pattern;
+	public FLAutomation? Automation;
 	public uint DurationTicks;
-	public ushort PlaylistTrack1Indexed;
+	public FLPlaylistTrack PlaylistTrack;
 
-	public void Write(EndianBinaryWriter w)
+	public FLPlaylistItem(uint tick, FLPattern pattern, uint duration, FLPlaylistTrack track)
+	{
+		AbsoluteTick = tick;
+		Pattern = pattern;
+		DurationTicks = duration;
+		PlaylistTrack = track;
+	}
+	public FLPlaylistItem(uint tick, FLAutomation a, uint duration, FLPlaylistTrack track)
+	{
+		AbsoluteTick = tick;
+		Automation = a;
+		DurationTicks = duration;
+		PlaylistTrack = track;
+	}
+
+	public void Write(EndianBinaryWriter w, List<FLPattern> pats, int numChans, List<FLAutomation> autos, List<FLPlaylistTrack> tracks)
 	{
 		w.WriteUInt32(AbsoluteTick);
 		w.WriteUInt16(0x5000);
-		w.WriteByte(Pattern1Indexed);
-		w.WriteByte(0x50);
+		if (Automation is not null)
+		{
+			int auto0Indexed = autos.IndexOf(Automation) + numChans;
+			w.WriteUInt16((ushort)auto0Indexed);
+		}
+		else
+		{
+			int pat1Indexed = pats.IndexOf(Pattern!) + 1;
+			w.WriteUInt16((ushort)(0x5000 + pat1Indexed));
+		}
 		w.WriteUInt32(DurationTicks);
-		w.WriteUInt16((ushort)(500 - PlaylistTrack1Indexed));
+
+		int track1Indexed = tracks.IndexOf(PlaylistTrack) + 1;
+		w.WriteUInt16((ushort)(500 - track1Indexed)); // TODO: If I add/remove playlist tracks, does this 500 change?
+
 		w.WriteUInt16(0);
 		w.WriteUInt16(120);
 		w.WriteByte(0x40);
@@ -68,7 +96,15 @@ internal sealed class FLPlaylistItem
 		w.WriteByte(0x40);
 		w.WriteByte(0x64);
 		w.WriteUInt16(0x8080);
-		w.WriteUInt32(uint.MaxValue);
-		w.WriteUInt32(uint.MaxValue);
+		if (Automation is not null)
+		{
+			w.WriteSingle(-1f);
+			w.WriteSingle(-1f);
+		}
+		else
+		{
+			w.WriteUInt32(uint.MaxValue);
+			w.WriteUInt32(uint.MaxValue);
+		}
 	}
 }

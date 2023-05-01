@@ -6,13 +6,13 @@ using System.Text;
 
 namespace MIDIProgramSplitter.FLP;
 
-internal sealed partial class FLProject
+internal sealed class FLProjectReader
 {
 	private readonly ushort _ppqn;
 
 	private readonly StringBuilder _log;
 
-	public FLProject(Stream s)
+	public FLProjectReader(Stream s)
 	{
 		var r = new EndianBinaryReader(s, ascii: true);
 
@@ -162,6 +162,7 @@ internal sealed partial class FLProject
 		switch (ev)
 		{
 			case FLEvent.Color:
+			case FLEvent.PatColor:
 			{
 				Log(string.Format("DWord: {0} = 0x{1:X6}", ev, data));
 				break;
@@ -174,6 +175,8 @@ internal sealed partial class FLProject
 			case FLEvent.ChannelSampleFlags:
 			case FLEvent.FXInChanNum:
 			case FLEvent.FXOutChanNum:
+			case FLEvent.Unk_157:
+			case FLEvent.Unk_158:
 			{
 				Log(string.Format("DWord: {0} = 0x{1:X}", ev, data));
 				break;

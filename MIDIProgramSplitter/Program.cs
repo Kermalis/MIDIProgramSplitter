@@ -9,15 +9,24 @@ internal static class Program
 {
 	private static void Main(string[] args)
 	{
-		Test_ReadFLP();
+		//Test_ReadFLP();
 		//Test_WriteFLP();
-		return;
+		//return;
 
 #if DEBUG
 		args = new string[]
 		{
-			@"E:\Music\MIDIs\Pokemon B2W2\Music\Colress Battle.mid",
+			//@"E:\Music\MIDIs\Pokemon B2W2\Music\Roaming Legendary Battle format1.mid",
+			@"E:\Music\MIDIs\Pokemon B2W2\Music\B2W2KantoChampion format1.mid",
+			//@"E:\Music\MIDIs\Pokemon B2W2\Music\Colress Battle.mid",
+			//@"E:\Music\MIDIs\DS Rips\HGSS\BATTLE1\SEQ_GS_VS_TRAINER format1.mid",
+			//@"E:\Music\MIDIs\DS Rips\HGSS\BATTLE2\SEQ_GS_VS_RIVAL format1.mid",
+			//@"E:\Music\MIDIs\DS Rips\HGSS\BATTLE6\SEQ_GS_VS_RAIKOU format1.mid",
+			//@"C:\Users\Kermalis\Documents\Development\GitHub\pokeemerald\sound\songs\midi\mus_vs_aqua_magma.mid",
+
 			@"E:\Music\MIDIs\Split Rips\BWB2W2"
+			//@"E:\Music\MIDIs\Split Rips\HGSS"
+			//@"E:\Music\MIDIs\Split Rips\RSE"
 		};
 #endif
 
@@ -41,8 +50,9 @@ internal static class Program
 		using (FileStream fs = File.OpenRead(inFile))
 		{
 			var inMIDI = new MIDIFile(fs);
-			var outMIDI = new OutMIDI(inMIDI);
-			outMIDI.Save(outFile);
+			var splitter = new Splitter(inMIDI);
+			splitter.SaveMIDI(outFile);
+			splitter.Test_WriteFLP();
 		}
 
 		Console.WriteLine();
@@ -54,18 +64,13 @@ internal static class Program
 	}
 	private static void Test_ReadFLP()
 	{
-		//const string IN = @"C:\Users\Kermalis\Documents\Development\GitHub\MIDIProgramSplitter\Empty.flp";
-		//const string IN = @"C:\Users\Kermalis\Documents\Development\GitHub\MIDIProgramSplitter\EmptyWithFruityLSD.flp";
-		//const string IN = @"C:\Users\Kermalis\Documents\Development\GitHub\MIDIProgramSplitter\EmptyWithTwoMIDIOut.flp";
-		//const string IN = @"C:\Users\Kermalis\Documents\Development\GitHub\MIDIProgramSplitter\TwoMIDIOut_D5InPat1.flp";
-		const string IN = @"C:\Users\Kermalis\Documents\Development\GitHub\MIDIProgramSplitter\TwoMIDIOut_D5Cs5InPat1.flp";
-		//const string IN = @"C:\Users\Kermalis\Documents\Development\GitHub\MIDIProgramSplitter\Test.flp";
-		//const string IN = @"C:\Users\Kermalis\Documents\Development\GitHub\MIDIProgramSplitter\Test2.flp";
+		const string IN = @"C:\Users\Kermalis\Documents\Development\GitHub\MIDIProgramSplitter\TestIn.flp";
+		//const string IN = @"C:\Users\Kermalis\Documents\Development\GitHub\MIDIProgramSplitter\TestOUT.flp";
 		//const string IN = @"D:\Music\Projects\Remix\Vs Colress.flp";
 
 		using (FileStream s = File.OpenRead(IN))
 		{
-			var flp = new FLProject(s);
+			var flp = new FLProjectReader(s);
 			;
 		}
 	}
@@ -75,51 +80,53 @@ internal static class Program
 
 		using (FileStream s = File.Create(OUT))
 		{
-			var chans = new FLChannel[]
+			var w = new FLProjectWriter();
+
+			w.Channels.Add(new FLChannel("Test Chan 0!", 0, 0));
+			w.Channels.Add(new FLChannel("CHAN ONE", 1, MIDIProgram.FrenchHorn));
+
+			/*w.Automations.Add(new FLAutomation("Test auto", FLAutomation.MyType.Volume, chans[1])
 			{
-				new FLChannel("Test Chan 0!", 0, 0),
-				new FLChannel("CHAN ONE", 1, 60),
-			};
-			var autos = new FLAutomation[]
-			{
-				//
-			};
-			var pats = new FLPattern[]
-			{
-				new FLPattern
+				Points =
 				{
-					Notes = // Must be in order of AbsoluteTick
+					new FLAutomation.Point
 					{
-						new FLPatternNote
-						{
-							AbsoluteTick = 0,
-							Channel = 1,
-							DurationTicks = 48,
-							Key = 60,
-							Velocity = 0x80,
-						},
-						new FLPatternNote
-						{
-							AbsoluteTick = 48,
-							Channel = 0,
-							DurationTicks = 48,
-							Key = 62,
-							Velocity = 0x64,
-						},
-					}
+						Value = 0.5
+					},
+					new FLAutomation.Point
+					{
+						AbsoluteTicks = 96,
+						Value = 1
+					},
 				}
-			};
-			var plItems = new FLPlaylistItem[]
+			});*/
+
+			w.Patterns.Add(new FLPattern
 			{
-				new FLPlaylistItem
+				Notes = // Must be in order of AbsoluteTick
 				{
-					AbsoluteTick = 0,
-					DurationTicks = 96 * 4,
-					Pattern1Indexed = 1,
-					PlaylistTrack1Indexed = 1,
+					new FLPatternNote
+					{
+						AbsoluteTick = 0,
+						Channel = 1,
+						DurationTicks = 48,
+						Key = 60,
+						Velocity = 0x80,
+					},
+					new FLPatternNote
+					{
+						AbsoluteTick = 48,
+						Channel = 0,
+						DurationTicks = 48,
+						Key = 62,
+						Velocity = 0x64,
+					},
 				}
-			};
-			FLProject.Write(s, chans, autos, pats, plItems);
+			});
+
+			w.AddToPlaylist(w.Patterns[0], 0, 96 * 4, w.PlaylistTracks[0]);
+
+			w.Write(s);
 		}
 	}
 }
