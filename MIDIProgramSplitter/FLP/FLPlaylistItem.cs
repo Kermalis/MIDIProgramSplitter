@@ -90,11 +90,12 @@ internal sealed class FLPlaylistItem
 		w.WriteUInt16((ushort)(500 - track1Indexed)); // TODO: If I add/remove playlist tracks, does this 500 change?
 
 		w.WriteUInt16(0);
-		w.WriteUInt16(120);
-		w.WriteByte(0x40);
+		w.WriteByte(0x78); // 120
 		w.WriteByte(0);
-		w.WriteByte(0x40);
-		w.WriteByte(0x64);
+		w.WriteByte(0x40); // 64
+		w.WriteByte(0);
+		w.WriteByte(0x40); // 64
+		w.WriteByte(0x64); // 100
 		w.WriteUInt16(0x8080);
 		if (Automation is not null)
 		{
@@ -103,8 +104,9 @@ internal sealed class FLPlaylistItem
 		}
 		else
 		{
-			w.WriteUInt32(uint.MaxValue);
-			w.WriteUInt32(uint.MaxValue);
+			// Both are uint.MaxValue if not manually set to the duration
+			w.WriteUInt32(0);
+			w.WriteUInt32(DurationTicks);
 		}
 	}
 }
