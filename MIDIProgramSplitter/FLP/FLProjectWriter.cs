@@ -228,6 +228,7 @@ internal sealed class FLProjectWriter
 		{
 			// TODO: Why did this CtrlRecChan only show up sometimes?
 			// Bytes: CtrlRecChan - 12 = [0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x19, 0x00, 0x00]
+			WriteBytesEventWithLength(w, FLEvent.CtrlRecChan, Array.Empty<byte>()); // This appeared when resizing a pattern without changing it
 			for (int i = 0; i < Patterns.Count; i++)
 			{
 				WriteWordEvent(w, FLEvent.NewPattern, (ushort)(i + 1));
