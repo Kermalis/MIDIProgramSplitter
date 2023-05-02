@@ -164,7 +164,7 @@ internal sealed class FLProjectReader
 			case FLEvent.Color:
 			case FLEvent.PatColor:
 			{
-				Log(string.Format("DWord: {0} = 0x{1:X6}", ev, data));
+				Log(string.Format("DWord: {0} = 0x{1:X6} ({2})", ev, data, new FLColor3(data)));
 				break;
 			}
 			case FLEvent.DelayReso:
