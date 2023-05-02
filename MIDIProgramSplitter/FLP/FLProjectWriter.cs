@@ -251,7 +251,7 @@ internal sealed class FLProjectWriter
 		// For some reason, pattern colors go between
 		for (int i = 0; i < Patterns.Count; i++)
 		{
-			Patterns[i].WriteColorIfNecessary(w, (ushort)(i + 1));
+			Patterns[i].WriteColorAndNameIfNecessary(w, (ushort)(i + 1));
 		}
 		//
 		chanFilter = 0;
