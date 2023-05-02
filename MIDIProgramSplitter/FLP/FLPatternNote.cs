@@ -35,7 +35,7 @@ internal struct FLPatternNote
 	public byte Slide;
 	/// <summary>Always 0x40</summary>
 	public byte Unk5 = 0x40;
-	public ushort Channel;
+	public ushort Channel; // TODO: Reference to the FLChannel
 	/// <summary>Infinite => 0</summary>
 	public uint DurationTicks = 48;
 	/// <summary>C5 => 60</summary>

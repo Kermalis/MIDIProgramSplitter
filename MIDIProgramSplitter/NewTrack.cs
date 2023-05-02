@@ -8,15 +8,14 @@ internal sealed class NewTrack
 	public readonly MIDIProgram Program;
 	public readonly MIDITrackChunk Track;
 	public readonly string Name;
-	public readonly List<(uint StartTicks, uint DurationTicks)> PatternTicksList;
-	// TODO: Include patterns of notes here directly
+	public readonly List<NewTrackPattern> Patterns;
 
-	public NewTrack(MIDIProgram p, List<(uint, uint)> patternTicksList, string name)
+	public NewTrack(MIDIProgram p, string name)
 	{
 		Program = p;
-		PatternTicksList = patternTicksList;
 		Name = name;
 		Track = new MIDITrackChunk();
+		Patterns = new List<NewTrackPattern>();
 
 		Track.InsertMessage(0, MetaMessage.CreateTextMessage(MetaMessageType.TrackName, Name));
 		// Cannot set voice here since it'd mess up the entire channel

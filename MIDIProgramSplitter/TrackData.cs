@@ -1,5 +1,4 @@
 ﻿using Kermalis.MIDI;
-using MIDIProgramSplitter.FLP;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,8 +6,15 @@ using System.IO;
 namespace MIDIProgramSplitter;
 
 // Assumes a format1 track
-internal sealed class TrackData
+internal sealed partial class TrackData
 {
+	private struct PlayingNote
+	{
+		public MIDIProgram Program;
+		public NewTrackPattern Pat;
+		public MIDIEvent NoteOnE;
+	}
+
 	private readonly byte _trackIndex;
 	private readonly MIDITrackChunk _inTrack;
 	private readonly byte _trackChannel;
@@ -17,6 +23,7 @@ internal sealed class TrackData
 	private readonly HashSet<MIDIProgram> _usedPrograms;
 	/// <summary>Used while iterating the events</summary>
 	private MIDIProgram _curProgram;
+	private readonly List<PlayingNote> _playingNotes;
 	/// <summary>The new tracks created</summary>
 	private readonly NewTrackDict? _newTracks; // Allow null I guess since you could be copying automations for later with no notes
 
@@ -32,21 +39,19 @@ internal sealed class TrackData
 		_inTrack = inTrack;
 
 		_usedPrograms = new HashSet<MIDIProgram>();
-
+		_playingNotes = new List<PlayingNote>();
 		_volEvents = new List<MIDIEvent>();
 		_panEvents = new List<MIDIEvent>();
 		_pitchEvents = new List<MIDIEvent>();
 		_programEvents = new List<MIDIEvent>();
 
-		_trackChannel = RecordAllUsedProgramsInTrack();
+		_trackChannel = GatherTrackInfoFirstPass();
 
-		_newTracks = _usedPrograms.Count == 0
-			? null
-			: new NewTrackDict(trackIndex, _trackChannel, _usedPrograms, _programEvents, (uint)_inTrack.NumTicks);
+		_newTracks = _usedPrograms.Count == 0 ? null : new NewTrackDict(trackIndex, _trackChannel, _usedPrograms);
 	}
 
-	/// <summary>Searches for all program changes in <see cref="_inTrack"/>. <see cref="_usedPrograms"/>'s elements correspond to each MIDI channel. Program changes with no NoteOn are not recorded.</summary>
-	private byte RecordAllUsedProgramsInTrack()
+	/// <summary>Program changes with no NoteOn are not recorded.</summary>
+	private byte GatherTrackInfoFirstPass()
 	{
 		byte chan = byte.MaxValue;
 
@@ -115,22 +120,31 @@ internal sealed class TrackData
 	/// <summary>Iterates all messages in <see cref="_inTrack"/> and copies/splits them to the new tracks</summary>
 	public void SplitTrack()
 	{
+		if (_newTracks is null)
+		{
+			Console.WriteLine("Skipping track {0} because it has no notes...", _trackIndex);
+			return;
+		}
+
+		NewTrackDict ts = _newTracks;
 		_curProgram = 0;
-		var playingNotes = new List<(MIDIProgram, NoteOnMessage)>();
+		NewTrackPattern? curPattern = null;
 
 		for (MIDIEvent? e = _inTrack.First; e is not null; e = e.Next)
 		{
-			if (SplitTrack_SpecialMessage(e, playingNotes))
+			if (SplitTrack_SpecialMessage(e, ts, ref curPattern))
 			{
-				continue;
+				_newTracks.InsertEventIntoAllNewTracks(e);
 			}
+		}
 
-			// Add to all new tracks
-			_newTracks?.InsertEventIntoAllNewTracks(e);
+		if (_playingNotes.Count != 0)
+		{
+			throw new InvalidDataException($"Track {_trackIndex}: NoteOn and NoteOff count mismatch...");
 		}
 	}
-	/// <summary>Returns true if this event should not be added to the new tracks</summary>
-	private bool SplitTrack_SpecialMessage(MIDIEvent e, List<(MIDIProgram, NoteOnMessage)> playingNotes)
+	/// <summary>Returns false if this event should not be added to the new tracks</summary>
+	private bool SplitTrack_SpecialMessage(MIDIEvent e, NewTrackDict ts, ref NewTrackPattern? curPattern)
 	{
 		MIDIMessage msg = e.Message;
 		switch (msg)
@@ -138,45 +152,42 @@ internal sealed class TrackData
 			case ProgramChangeMessage m:
 			{
 				_curProgram = m.Program;
-				NewTrackDict? ts = _newTracks; // May be null if there are no notes and no other program changes
-
-				if (ts is null || !ts.VoiceIsUsed(m.Program))
+				curPattern = null;
+				if (!ts.VoiceIsUsed(_curProgram))
 				{
-					return true; // Ignore this program change in that case
+					return false; // Ignore this program change in that case
 				}
 				break; // Add to all new tracks on this channel
 			}
 			case NoteOnMessage m:
 			{
-				NewTrackDict? ts = _newTracks;
-				if (ts is null)
-				{
-					throw new InvalidDataException("NoteOn track issue...");
-				}
-
 				if (m.Velocity == 0)
 				{
-					SplitTrack_StopPlayingNote(e, playingNotes, ts, m.Note);
+					SplitTrack_StopPlayingNote(e, ts, m.Note);
 				}
 				else
 				{
-					playingNotes.Add((_curProgram, m));
+					if (curPattern is null)
+					{
+						curPattern = new NewTrackPattern();
+						ts.Dict[_curProgram].Patterns.Add(curPattern);
+					}
+					_playingNotes.Add(new PlayingNote
+					{
+						Program = _curProgram,
+						Pat = curPattern,
+						NoteOnE = e
+					});
 
 					ts.InsertEventIntoNewTrack(e, _curProgram);
 				}
-				return true; // Only add to correct new track
+				return false; // Only add to correct new track
 			}
 			case NoteOffMessage m:
 			{
-				NewTrackDict? ts = _newTracks;
-				if (ts is null)
-				{
-					throw new InvalidDataException("There was a NoteOff message in a track with no NoteOn...");
-				}
-
 				// TODO: NoteOff velocity? It doesn't always match. NoteOn was 111 and NoteOff was 64
-				SplitTrack_StopPlayingNote(e, playingNotes, ts, m.Note);
-				return true; // Only add to correct new track
+				SplitTrack_StopPlayingNote(e, ts, m.Note);
+				return false; // Only add to correct new track
 			}
 			case MetaMessage m:
 			{
@@ -184,227 +195,42 @@ internal sealed class TrackData
 
 				if (m.Type == MetaMessageType.TrackName)
 				{
-					return true; // Ignore these
+					return false; // Ignore these
 				}
 				break; // Add to all new tracks
 			}
 		}
 
-		return false;
+		return true;
 	}
-	private void SplitTrack_StopPlayingNote(MIDIEvent e, List<(MIDIProgram, NoteOnMessage)> playingNotes, NewTrackDict ts, MIDINote n)
+	private void SplitTrack_StopPlayingNote(MIDIEvent e, NewTrackDict ts, MIDINote n)
 	{
 		// Try to catch the oldest first
-		for (int i = 0; i < playingNotes.Count; i++)
+		for (int i = 0; i < _playingNotes.Count; i++)
 		{
-			(MIDIProgram playingP, NoteOnMessage noteOn) = playingNotes[i];
+			PlayingNote p = _playingNotes[i];
+			var noteOn = (NoteOnMessage)p.NoteOnE.Message;
 			if (noteOn.Note == n) // Check channel also if not Format1
 			{
-				playingNotes.RemoveAt(i);
-				ts.InsertEventIntoNewTrack(e, playingP);
+				_playingNotes.RemoveAt(i);
+				ts.InsertEventIntoNewTrack(e, p.Program);
+				p.Pat.Notes.Add(new NewTrackPattern.Note(p.NoteOnE, e));
 				return;
 			}
 		}
 		throw new InvalidDataException($"Track {_trackIndex}: NoteOff without a prior NoteOn...");
 	}
 
-	public void AddNewTracks(MIDIFile outMIDI)
+	public void MIDI_AddNewTracks(MIDIFile outMIDI)
 	{
 		if (_newTracks is null)
 		{
 			return;
 		}
 
-		foreach (KeyValuePair<MIDIProgram, NewTrack> kvp in _newTracks.Dict)
+		foreach (NewTrack newT in _newTracks.Dict.Values)
 		{
-			outMIDI.AddChunk(kvp.Value.Track);
+			outMIDI.AddChunk(newT.Track);
 		}
-	}
-	public void FLP_HandleTrack(FLProjectWriter w, uint maxTicks)
-	{
-		if (_newTracks is null)
-		{
-			return; // TODO: Don't ignore automation
-		}
-
-		Dictionary<MIDIProgram, NewTrack> dict = _newTracks.Dict;
-		List<FLChannel> ourChans = FLP_CreateChannels(w, dict);
-		FLP_CreatePatterns(w, ourChans, dict, maxTicks);
-		FLP_CreateAutomations(w, ourChans, maxTicks);
-	}
-	private List<FLChannel> FLP_CreateChannels(FLProjectWriter w, Dictionary<MIDIProgram, NewTrack> dict)
-	{
-		var ourChans = new List<FLChannel>();
-		foreach (NewTrack newT in dict.Values)
-		{
-			var c = new FLChannel(newT.Name, _trackChannel, newT.Program);
-			w.Channels.Add(c);
-			ourChans.Add(c);
-		}
-		return ourChans;
-	}
-	private void FLP_CreatePatterns(FLProjectWriter w, List<FLChannel> ourChans, Dictionary<MIDIProgram, NewTrack> dict, uint maxTicks)
-	{
-		int ourChanID = 0;
-		foreach (NewTrack newT in dict.Values)
-		{
-			// Randomize pattern colors for fun
-			var p = new FLPattern
-			{
-				Color = new FLColor3((uint)Random.Shared.Next(0x1_000_000)),
-			};
-			w.Patterns.Add(p);
-
-			FLChannel ourChan = ourChans[ourChanID++];
-			ushort chanID = (ushort)w.Channels.IndexOf(ourChan);
-
-			FLP_AddNotes(p, newT, chanID);
-			FLPlaylistTrack pTrack = w.PlaylistTracks[_trackIndex];
-			pTrack.Name = "T" + (_trackIndex + 1) + 'C' + (_trackChannel + 1);
-
-			w.AddToPlaylist(p, 0, maxTicks, pTrack);
-
-			// TODO: Chop up the new tracks into multiple patterns
-			//(uint startTick, uint durationTicks) = newT.JankyStartEndList.Single(((uint, uint) tup) => tup.Item1 <= p.Notes[0].AbsoluteTick && p.no);
-
-			//w.AddToPlaylist(p, startTick, durationTicks, pTrack);
-		}
-	}
-	private void FLP_AddNotes(FLPattern p, NewTrack newT, ushort chanID)
-	{
-		var playingNotes = new List<MIDIEvent>();
-
-		for (MIDIEvent? e = newT.Track.First; e is not null; e = e.Next)
-		{
-			switch (e.Message)
-			{
-				case NoteOnMessage m:
-				{
-					if (m.Velocity == 0)
-					{
-						FLP_StopPlayingNote(p, chanID, e, m.Note, playingNotes);
-					}
-					else
-					{
-						playingNotes.Add(e);
-					}
-					break;
-				}
-				case NoteOffMessage m:
-				{
-					// TODO: NoteOff velocity? It doesn't always match. NoteOn was 111 and NoteOff was 64
-					FLP_StopPlayingNote(p, chanID, e, m.Note, playingNotes);
-					break;
-				}
-			}
-		}
-
-		if (playingNotes.Count != 0)
-		{
-			throw new InvalidDataException($"Track {_trackIndex}: NoteOff and NoteOn count mismatch...");
-		}
-	}
-	private void FLP_StopPlayingNote(FLPattern p, ushort chanID, MIDIEvent e, MIDINote n, List<MIDIEvent> playingNotes)
-	{
-		// Try to catch the oldest first
-		for (int i = 0; i < playingNotes.Count; i++)
-		{
-			MIDIEvent playingE = playingNotes[i];
-			var noteOn = (NoteOnMessage)playingE.Message;
-			if (noteOn.Note == n) // Check channel also if not Format1
-			{
-				playingNotes.RemoveAt(i);
-				p.Notes.Add(new FLPatternNote
-				{
-					Channel = chanID,
-					AbsoluteTick = (uint)playingE.Ticks,
-					DurationTicks = (uint)(e.Ticks - playingE.Ticks),
-					Key = (byte)noteOn.Note,
-					Velocity = noteOn.Velocity,
-				});
-				return;
-			}
-		}
-		throw new InvalidDataException($"Track {_trackIndex}: NoteOff without a prior NoteOn...");
-	}
-	private void FLP_CreateAutomations(FLProjectWriter w, List<FLChannel> ourChans, uint maxTicks)
-	{
-		bool groupWithAbove = false;
-
-		// TODO: If there are 0 or 1 events, don't create automation pls
-		if (_volEvents.Count != 0)
-		{
-			FLAutomation a = CreateAuto("Volume", FLAutomation.MyType.Volume, ourChans);
-			foreach (MIDIEvent e in _volEvents)
-			{
-				byte v = ((ControllerMessage)e.Message).Value;
-				a.AddPoint((uint)e.Ticks, v / 127d);
-			}
-			AddAuto(w, a, maxTicks, 1d, ref groupWithAbove); // I believe MIDI defaults to max channel volume
-		}
-		if (_panEvents.Count != 0)
-		{
-			FLAutomation a = CreateAuto("Panpot", FLAutomation.MyType.Panpot, ourChans);
-			foreach (MIDIEvent e in _panEvents)
-			{
-				byte v = ((ControllerMessage)e.Message).Value;
-				// 0 => 100% left, 64 => center, 127 => 100% right
-				double dv; // Split the operation to ensure 0.5 is centered
-				if (v <= 64)
-				{
-					dv = Utils.LerpUnclamped(0, 64, 0, 0.5, v);
-				}
-				else
-				{
-					dv = Utils.LerpUnclamped(64, 127, 0.5, 1, v);
-				}
-				a.AddPoint((uint)e.Ticks, dv);
-			}
-			AddAuto(w, a, maxTicks, 0.5d, ref groupWithAbove); // Centered
-		}
-		if (_pitchEvents.Count != 0)
-		{
-			FLAutomation a = CreateAuto("Pitch", FLAutomation.MyType.Pitch, ourChans);
-			foreach (MIDIEvent e in _pitchEvents)
-			{
-				//int v = ((PitchBendMessage)e.Message).GetPitchAsInt();
-
-				// TODO: Get correct cents values
-				// This is theoretically correct:
-				//double dv = Utils.LerpUnclamped(-8192, 8191, 0, 1, v); // 0 => -4800 cents, 0.5 => +0 cents, 1.0 => 4800 cents
-				//double dv = Utils.LerpUnclamped(-256*256, (256*256)-1, 0, 1, v);
-
-				// This method gets close. Target is -4 but it gives -3. Probably -4 is a rounding error in GBA and -3 is correct
-				double range = 127d / 9600;
-				double dv = Utils.LerpUnclamped(-64, 63, 0.5 - range, 0.5 + range, ((PitchBendMessage)e.Message).MSB - 64);
-
-				a.AddPoint((uint)e.Ticks, dv);
-			}
-			AddAuto(w, a, maxTicks, 0.5d, ref groupWithAbove); // +0 cents
-		}
-		if (_programEvents.Count != 0)
-		{
-			FLAutomation a = CreateAuto("Instrument", FLAutomation.MyType.MIDIProgram, ourChans);
-			foreach (MIDIEvent e in _programEvents)
-			{
-				byte v = (byte)(((ProgramChangeMessage)e.Message).Program + 1);
-				a.AddPoint((uint)e.Ticks, v / 128d);
-			}
-			AddAuto(w, a, maxTicks, 1 / 128d, ref groupWithAbove); // Program 0
-		}
-	}
-	private FLAutomation CreateAuto(string type, FLAutomation.MyType flType, List<FLChannel> ourChans)
-	{
-		return new FLAutomation($"Track {_trackIndex + 1} {type}", flType, ourChans);
-	}
-	private static void AddAuto(FLProjectWriter w, FLAutomation a, uint maxTicks, double defaultVal, ref bool groupWithAbove)
-	{
-		a.PadPoints(maxTicks, defaultVal);
-		w.Automations.Add(a);
-
-		FLPlaylistTrack track = w.PlaylistTracks[w.PlaylistItems.Count + 16]; // TODO: Intelligence
-		track.GroupWithAbove = groupWithAbove;
-		groupWithAbove = true;
-		w.AddToPlaylist(a, 0, maxTicks, track);
 	}
 }

@@ -54,10 +54,11 @@ internal sealed class FLProjectWriter
 	public byte TimeSigNumerator;
 	public byte TimeSigDenominator;
 
-	public FLProjectWriter(ushort ppqn = 96)
+	public FLProjectWriter()
 	{
-		PPQN = ppqn;
-		CurrentTempo = 120; // MIDI Default
+		// FL Default
+		PPQN = 96;
+		CurrentTempo = 140;
 		TimeSigNumerator = 4;
 		TimeSigDenominator = 4;
 
@@ -206,6 +207,7 @@ internal sealed class FLProjectWriter
 	}
 	private void WriteChanFilters(EndianBinaryWriter w)
 	{
+		// TODO: object. Also, have an option to split tracks into separate chan filters (would help a lot for complex songs)
 		if (Automations.Count > 0)
 		{
 			WriteUTF16EventWithLength(w, FLEvent.ChanFilterName, "Automation\0");
