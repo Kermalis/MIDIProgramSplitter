@@ -129,7 +129,7 @@ internal sealed class FLChannel
 		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChanOfsLevels, ChanOfsLevels);
 		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChanPoly, ChanPoly);
 		WriteChanParams(w, id);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.CutCutBy, (uint)(id + 1) * 0x10_001u); // Why lol
+		FLProjectWriter.WriteDWordEvent(w, FLEvent.CutCutBy, (uint)(id + 1) * 0x10_001u);
 		FLProjectWriter.WriteDWordEvent(w, FLEvent.ChannelLayerFlags, 0);
 		FLProjectWriter.WriteDWordEvent(w, FLEvent.ChanFilterNum, filterNum);
 		FLProjectWriter.WriteByteEvent(w, FLEvent.Unk_32, 0);

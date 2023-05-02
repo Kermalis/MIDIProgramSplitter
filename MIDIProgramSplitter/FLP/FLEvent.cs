@@ -94,6 +94,7 @@ internal enum FLEvent : byte
 	PlaylistItem,
 	Echo,
 	FXSine,
+	/// <summary>Mixture of the "Cut" and "Cut By" numerics on a channel</summary>
 	CutCutBy,
 	WindowH,
 	// 134
