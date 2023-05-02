@@ -282,7 +282,7 @@ internal sealed class FLProjectReader
 			case FLEvent.TempoFine: // FineTempo is used now
 
 			// DWord
-			case FLEvent.PlaylistItem:
+			case FLEvent.PlaylistItem: // PlaylistItems now
 			case FLEvent.MainResoCutOff:
 			case FLEvent.SSNote:
 			case FLEvent.PatAutoMode:
@@ -323,6 +323,7 @@ internal sealed class FLProjectReader
 			case FLEvent.ChanFilterName:
 			case FLEvent.PlaylistTrackName:
 			case FLEvent.PlaylistArrangementName:
+			case FLEvent.PatternName:
 				return true;
 		}
 		return false;
