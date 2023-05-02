@@ -22,10 +22,8 @@ internal enum FLEvent : byte
 	Pitchable,
 	Zipped,
 	DelayFlags,
-	/// <summary>Value like 4</summary>
-	TimeSigNumerator,
-	/// <summary>Value like 4</summary>
-	TimeSigDenominator,
+	ProjectTimeSigNumerator,
+	ProjectTimeSigDenominator,
 	UseLoopPoints,
 	ChannelLoopType,
 	ChannelType,
@@ -41,10 +39,10 @@ internal enum FLEvent : byte
 	ShouldPlayTruncatedClipNotes,
 	EEAutoMode,
 	Unk_32, // 0
-	Unk_33, // 4
-	Unk_34, // 4
+	TimeSigMarkerNumerator,
+	TimeSigMarkerDenominator,
 	/// <summary>0 for original FL timing, 1 for traditional time signatures</summary>
-	ShouldUseTimeSignatures,
+	ProjectShouldUseTimeSignatures,
 	Unk_36, // 0
 	Unk_37, // 1
 	Unk_38, // 1
@@ -55,7 +53,7 @@ internal enum FLEvent : byte
 	NewChannel = 0x40,
 	NewPattern,
 	Tempo,
-	CurPatternNum,
+	SelectedPatternNum,
 	PatData,
 	FX,
 	Fade_Stereo,

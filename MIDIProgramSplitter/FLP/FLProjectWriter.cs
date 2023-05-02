@@ -43,22 +43,29 @@ internal sealed class FLProjectWriter
 	// Insert volumes are stored in here as well.
 	private static readonly byte[] _initCtrlRecChan = File.ReadAllBytes("../../../../InitCtrlRecChan.bin");
 
-	private readonly ushort _ppqn;
 	public readonly List<FLChannel> Channels;
 	public readonly List<FLAutomation> Automations;
 	public readonly List<FLPattern> Patterns;
 	public readonly List<FLPlaylistItem> PlaylistItems;
+	public readonly List<FLPlaylistMarker> PlaylistMarkers;
 	public readonly List<FLPlaylistTrack> PlaylistTracks;
+	public ushort PPQN;
 	public decimal CurrentTempo;
+	public byte TimeSigNumerator;
+	public byte TimeSigDenominator;
 
 	public FLProjectWriter(ushort ppqn = 96)
 	{
-		_ppqn = ppqn;
+		PPQN = ppqn;
+		CurrentTempo = 120; // MIDI Default
+		TimeSigNumerator = 4;
+		TimeSigDenominator = 4;
+
 		Channels = new List<FLChannel>();
 		Automations = new List<FLAutomation>();
 		Patterns = new List<FLPattern>();
 		PlaylistItems = new List<FLPlaylistItem>();
-		CurrentTempo = 120; // MIDI Default
+		PlaylistMarkers = new List<FLPlaylistMarker>();
 
 		PlaylistTracks = new List<FLPlaylistTrack>(500);
 		for (int i = 0; i < PlaylistTracks.Capacity; i++)
@@ -75,6 +82,10 @@ internal sealed class FLProjectWriter
 	{
 		PlaylistItems.Add(new FLPlaylistItem(tick, a, duration, track));
 	}
+	public void AddTimeSigMarker(uint tick, byte num, byte denom)
+	{
+		PlaylistMarkers.Add(new FLPlaylistMarker(tick, num + "/" + denom, (num, denom)));
+	}
 
 	public void Write(Stream s)
 	{
@@ -85,7 +96,7 @@ internal sealed class FLProjectWriter
 		w.WriteUInt32(6); // Length
 		w.WriteUInt16(0); // Format
 		w.WriteUInt16((ushort)(Channels.Count + Automations.Count));
-		w.WriteUInt16(_ppqn);
+		w.WriteUInt16(PPQN);
 
 		// Data chunk
 		w.WriteChars("FLdt");
@@ -166,13 +177,13 @@ internal sealed class FLProjectWriter
 		WriteUTF16EventWithLength(w, FLEvent.RegistrationID, "d3@?4xufs49p1n?B>;?889\0"); // Probably shouldn't include this?
 
 		WriteDWordEvent(w, FLEvent.FineTempo, (uint)(CurrentTempo * 1_000));
-		WriteWordEvent(w, FLEvent.CurPatternNum, 1);
+		WriteWordEvent(w, FLEvent.SelectedPatternNum, 1);
 		WriteByteEvent(w, FLEvent.IsSongMode, 1);
 		WriteByteEvent(w, FLEvent.Shuffle, 0);
 		WriteWordEvent(w, FLEvent.MasterPitch, 0);
-		WriteByteEvent(w, FLEvent.TimeSigNumerator, 4);
-		WriteByteEvent(w, FLEvent.TimeSigDenominator, 4);
-		WriteByteEvent(w, FLEvent.ShouldUseTimeSignatures, 1);
+		WriteByteEvent(w, FLEvent.ProjectTimeSigNumerator, TimeSigNumerator);
+		WriteByteEvent(w, FLEvent.ProjectTimeSigDenominator, TimeSigDenominator);
+		WriteByteEvent(w, FLEvent.ProjectShouldUseTimeSignatures, 1);
 		WriteByteEvent(w, FLEvent.PanningLaw, 0); // Circular
 		WriteByteEvent(w, FLEvent.ShouldPlayTruncatedClipNotes, 1);
 		WriteByteEvent(w, FLEvent.ShouldShowInfoOnOpen, 0);
@@ -246,7 +257,7 @@ internal sealed class FLProjectWriter
 		chanFilter = 0;
 		foreach (FLAutomation a in Automations)
 		{
-			a.Write(w, chanID++, chanFilter, _ppqn);
+			a.Write(w, chanID++, chanFilter, PPQN);
 		}
 	}
 	private void WriteArrangement(EndianBinaryWriter w, ushort arrangementIndex)
@@ -261,6 +272,12 @@ internal sealed class FLProjectWriter
 		foreach (FLPlaylistItem item in PlaylistItems)
 		{
 			item.Write(w, Patterns, Channels.Count, Automations, PlaylistTracks);
+		}
+
+		// Playlist Markers
+		foreach (FLPlaylistMarker mark in PlaylistMarkers)
+		{
+			mark.Write(w);
 		}
 
 		// Playlist Tracks

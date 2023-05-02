@@ -105,7 +105,10 @@ internal sealed class Splitter
 		{
 			var w = new FLProjectWriter(ppqn: _inMIDI.HeaderChunk.TimeDivision.PPQN_TicksPerQuarterNote);
 
-			w.CurrentTempo = FLP_ReadMetaTrack(w);
+			FLP_ReadMetaTrack(w, out decimal tempo, out byte timeSigNum, out byte timeSigDenom);
+			w.CurrentTempo = tempo;
+			w.TimeSigNumerator = timeSigNum;
+			w.TimeSigDenominator = timeSigDenom;
 
 			foreach (TrackData t in _splitTracks)
 			{
@@ -115,13 +118,17 @@ internal sealed class Splitter
 			w.Write(s);
 		}
 	}
-	private decimal FLP_ReadMetaTrack(FLProjectWriter w)
+	private void FLP_ReadMetaTrack(FLProjectWriter w, out decimal tempo, out byte timeSigNum, out byte timeSigDenom)
 	{
 		const int DEFAULT_MIDI_TEMPO = 120;
 
-		decimal tempo = DEFAULT_MIDI_TEMPO;
+		tempo = DEFAULT_MIDI_TEMPO;
 		MIDIEvent? firstTempo = null;
 		FLAutomation? tempoAuto = null;
+		timeSigNum = 4;
+		timeSigDenom = 4;
+		MIDIEvent? firstTimeSig = null;
+		bool createdFirstTimeSigMarker = false;
 
 		for (MIDIEvent? e = _metaTrack.First; e is not null; e = e.Next)
 		{
@@ -133,13 +140,15 @@ internal sealed class Splitter
 					FLP_HandleTempo(e, m, w, ref tempo, ref firstTempo, ref tempoAuto);
 					break;
 				}
-				// TODO: TimeSig markers
+				case MetaMessageType.TimeSignature:
+				{
+					FLP_HandleTimeSig(e, m, w, ref timeSigNum, ref timeSigDenom, ref firstTimeSig, ref createdFirstTimeSigMarker);
+					break;
+				}
 			}
 		}
 
 		tempoAuto?.PadTempoPoints(_maxTicks, DEFAULT_MIDI_TEMPO);
-
-		return tempo;
 	}
 	private void FLP_HandleTempo(MIDIEvent e, MetaMessage m, FLProjectWriter w,
 		ref decimal tempo, ref MIDIEvent? firstTempo, ref FLAutomation? tempoAuto)
@@ -162,5 +171,25 @@ internal sealed class Splitter
 			tempoAuto.AddTempoPoint((uint)firstTempo.Ticks, tempo);
 		}
 		tempoAuto.AddTempoPoint((uint)e.Ticks, bpm);
+	}
+	private static void FLP_HandleTimeSig(MIDIEvent e, MetaMessage m, FLProjectWriter w,
+		ref byte timeSigNum, ref byte timeSigDenom, ref MIDIEvent? firstTimeSig, ref bool createdFirstTimeSigMarker)
+	{
+		m.ReadTimeSignatureMessage(out byte num, out byte denom, out _, out _);
+		if (firstTimeSig is null)
+		{
+			timeSigNum = num;
+			timeSigDenom = denom;
+			firstTimeSig = e;
+			return;
+		}
+
+		// This is the 2nd or after change. 2nd will create the marker for #1 and #2
+		if (!createdFirstTimeSigMarker)
+		{
+			createdFirstTimeSigMarker = true;
+			w.AddTimeSigMarker((uint)firstTimeSig.Ticks, timeSigNum, timeSigDenom);
+		}
+		w.AddTimeSigMarker((uint)e.Ticks, num, denom);
 	}
 }

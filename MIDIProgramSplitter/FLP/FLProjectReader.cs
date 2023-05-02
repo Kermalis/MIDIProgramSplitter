@@ -177,6 +177,7 @@ internal sealed class FLProjectReader
 			case FLEvent.FXOutChanNum:
 			case FLEvent.Unk_157:
 			case FLEvent.Unk_158:
+			case FLEvent.NewTimeMarker:
 			{
 				Log(string.Format("DWord: {0} = 0x{1:X}", ev, data));
 				break;
