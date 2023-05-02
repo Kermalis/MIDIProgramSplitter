@@ -267,6 +267,10 @@ internal sealed class FLProjectWriter
 		WriteByteEvent(w, FLEvent.Unk_36, 0);
 
 		// Playlist Items
+
+		// Must be in order of AbsoluteTick
+		PlaylistItems.Sort((p1, p2) => p1.AbsoluteTick.CompareTo(p2.AbsoluteTick));
+
 		w.WriteEnum(FLEvent.PlaylistItems);
 		WriteTextEventLength(w, (uint)PlaylistItems.Count * FLPlaylistItem.LEN);
 		foreach (FLPlaylistItem item in PlaylistItems)
