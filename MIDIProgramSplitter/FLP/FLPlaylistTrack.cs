@@ -3,7 +3,7 @@ using System;
 
 namespace MIDIProgramSplitter.FLP;
 
-internal sealed class FLPlaylistTrack
+public sealed class FLPlaylistTrack
 {
 	private static ReadOnlySpan<byte> Part1 => new byte[15] { 0x00, 0x00, 0x48, 0x51, 0x56, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x80, 0x3F };
 	private static ReadOnlySpan<byte> Part2 => new byte[28]
@@ -25,7 +25,7 @@ internal sealed class FLPlaylistTrack
 		// TODO: color
 	}
 
-	public void Write(EndianBinaryWriter w, int index)
+	internal void Write(EndianBinaryWriter w, int index)
 	{
 		w.WriteEnum(FLEvent.NewPlaylistTrack);
 		FLProjectWriter.WriteTextEventLength(w, 66);

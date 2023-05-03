@@ -6,7 +6,7 @@ using System.Text;
 
 namespace MIDIProgramSplitter.FLP;
 
-internal sealed partial class FLAutomation
+public sealed partial class FLAutomation
 {
 	public enum MyType : byte
 	{
@@ -108,7 +108,7 @@ internal sealed partial class FLAutomation
 		PadPoints(targetTicks, Utils.LerpUnclamped(10, 522, 0, 1, defaultTempo));
 	}
 
-	public void Write(EndianBinaryWriter w, ushort id, uint filterNum, uint ppqn)
+	internal void Write(EndianBinaryWriter w, ushort id, uint filterNum, uint ppqn)
 	{
 		FLProjectWriter.WriteWordEvent(w, FLEvent.NewChannel, id);
 		FLProjectWriter.WriteByteEvent(w, FLEvent.ChannelType, (byte)FLChanType.Automation);
@@ -201,7 +201,7 @@ internal sealed partial class FLAutomation
 		w.WriteUInt32(0);
 		w.WriteUInt32(0);
 	}
-	public void WriteAutomationConnection(EndianBinaryWriter w, ushort automationChannelID, List<FLChannel> channels)
+	internal void WriteAutomationConnection(EndianBinaryWriter w, ushort automationChannelID, List<FLChannel> channels)
 	{
 		if (Type == MyType.Tempo)
 		{
@@ -255,7 +255,7 @@ internal sealed partial class FLAutomation
 		throw new ArgumentOutOfRangeException(nameof(t), t, null);
 	}
 
-	public static string ReadData(byte[] data)
+	internal static string ReadData(byte[] data)
 	{
 		using (var ms = new MemoryStream(data))
 		{

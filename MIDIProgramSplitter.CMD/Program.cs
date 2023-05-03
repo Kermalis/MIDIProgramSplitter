@@ -1,9 +1,10 @@
 ﻿using Kermalis.MIDI;
 using MIDIProgramSplitter.FLP;
 using System;
+using System.Collections.Generic;
 using System.IO;
 
-namespace MIDIProgramSplitter;
+namespace MIDIProgramSplitter.CMD;
 
 internal static class Program
 {
@@ -17,18 +18,18 @@ internal static class Program
 		args = new string[]
 		{
 			//@"E:\Music\MIDIs\Pokemon B2W2\Music\Roaming Legendary Battle format1.mid",
-			//@"E:\Music\MIDIs\Pokemon B2W2\Music\B2W2KantoChampion format1.mid",
+			@"E:\Music\MIDIs\Pokemon B2W2\Music\B2W2KantoChampion format1.mid",
 			//@"E:\Music\MIDIs\Pokemon B2W2\Music\Elite4Battle format1.mid",
 			//@"E:\Music\MIDIs\Pokemon B2W2\Music\Iris Battle format1.mid",
 			//@"E:\Music\MIDIs\Pokemon B2W2\Music\Colress Battle.mid",
-			@"E:\Music\MIDIs\DS Rips\HGSS\BATTLE1\SEQ_GS_VS_TRAINER format1.mid",
+			//@"E:\Music\MIDIs\DS Rips\HGSS\BATTLE1\SEQ_GS_VS_TRAINER format1.mid",
 			//@"E:\Music\MIDIs\DS Rips\HGSS\BATTLE2\SEQ_GS_VS_RIVAL format1.mid",
 			//@"E:\Music\MIDIs\DS Rips\HGSS\BATTLE6\SEQ_GS_VS_RAIKOU format1.mid",
 			//@"C:\Users\Kermalis\Documents\Development\GitHub\pokeemerald\sound\songs\midi\mus_vs_aqua_magma.mid",
 			//@"C:\Users\Kermalis\Documents\Development\GitHub\pokeemerald\sound\songs\midi\mus_surf.mid",
 
-			//@"E:\Music\MIDIs\Split Rips\BWB2W2"
-			@"E:\Music\MIDIs\Split Rips\HGSS"
+			@"E:\Music\MIDIs\Split Rips\BWB2W2"
+			//@"E:\Music\MIDIs\Split Rips\HGSS"
 			//@"E:\Music\MIDIs\Split Rips\RSE"
 		};
 #endif
@@ -66,6 +67,7 @@ internal static class Program
 		Console.ReadKey();
 #endif
 	}
+
 	private static void Test_ReadFLP()
 	{
 		const string IN = @"C:\Users\Kermalis\Documents\Development\GitHub\MIDIProgramSplitter\TestIn.flp";
@@ -75,6 +77,10 @@ internal static class Program
 		using (FileStream s = File.OpenRead(IN))
 		{
 			var flp = new FLProjectReader(s);
+
+#if DEBUG && WINDOWS
+			WinUtils.Win_SetClipboardString(flp.Log.ToString());
+#endif
 			;
 		}
 	}
@@ -89,7 +95,7 @@ internal static class Program
 			w.Channels.Add(new FLChannel("Test Chan 0!", 0, 0));
 			w.Channels.Add(new FLChannel("CHAN ONE", 1, MIDIProgram.FrenchHorn));
 
-			/*w.Automations.Add(new FLAutomation("Test auto", FLAutomation.MyType.Volume, chans[1])
+			w.Automations.Add(new FLAutomation("Test auto", FLAutomation.MyType.Volume, new List<FLChannel> { w.Channels[1] })
 			{
 				Points =
 				{
@@ -103,7 +109,7 @@ internal static class Program
 						Value = 1
 					},
 				}
-			});*/
+			});
 
 			w.Patterns.Add(new FLPattern
 			{

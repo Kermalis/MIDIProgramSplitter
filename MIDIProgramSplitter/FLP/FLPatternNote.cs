@@ -2,9 +2,9 @@
 
 namespace MIDIProgramSplitter.FLP;
 
-internal struct FLPatternNote
+public struct FLPatternNote
 {
-	public const int LEN = 24;
+	internal const int LEN = 24;
 
 	// This is just D5 at 0 pos:
 	// @00/01/02/03: Position

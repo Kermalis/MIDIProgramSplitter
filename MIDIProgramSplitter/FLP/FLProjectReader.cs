@@ -6,11 +6,10 @@ using System.Text;
 
 namespace MIDIProgramSplitter.FLP;
 
-internal sealed class FLProjectReader
+public sealed class FLProjectReader
 {
-	private readonly ushort _ppqn;
-
-	private readonly StringBuilder _log;
+	public readonly ushort PPQN;
+	public readonly StringBuilder Log;
 
 	public FLProjectReader(Stream s)
 	{
@@ -42,7 +41,7 @@ internal sealed class FLProjectReader
 			throw new InvalidDataException();
 		}
 
-		_ppqn = r.ReadUInt16();
+		PPQN = r.ReadUInt16();
 
 		// Now data chunk
 		r.ReadChars(chars);
@@ -58,13 +57,9 @@ internal sealed class FLProjectReader
 			throw new InvalidDataException();
 		}
 
-		_log = new StringBuilder();
+		Log = new StringBuilder();
 
 		ReadData(r);
-
-#if DEBUG && WINDOWS
-		Utils.Win_SetClipboardString(_log.ToString());
-#endif
 	}
 	private void ReadData(EndianBinaryReader r)
 	{
@@ -123,14 +118,14 @@ internal sealed class FLProjectReader
 		{
 			case FLEvent.ChannelType:
 			{
-				Log(string.Format("Byte: {0} = {1} ({2})", ev, data, (FLChanType)data));
+				LogLine(string.Format("Byte: {0} = {1} ({2})", ev, data, (FLChanType)data));
 				break;
 			}
 			default:
 			{
 				CheckEventExists(ev);
 
-				Log(string.Format("Byte: {0} = {1}", ev, data));
+				LogLine(string.Format("Byte: {0} = {1}", ev, data));
 				break;
 			}
 		}
@@ -145,14 +140,14 @@ internal sealed class FLProjectReader
 			case FLEvent.StDel:
 			case FLEvent.CutOff:
 			{
-				Log(string.Format("Word: {0} = 0x{1:X}", ev, data));
+				LogLine(string.Format("Word: {0} = 0x{1:X}", ev, data));
 				break;
 			}
 			default:
 			{
 				CheckEventExists(ev);
 
-				Log(string.Format("Word: {0} = {1}", ev, data));
+				LogLine(string.Format("Word: {0} = {1}", ev, data));
 				break;
 			}
 		}
@@ -164,7 +159,7 @@ internal sealed class FLProjectReader
 			case FLEvent.Color:
 			case FLEvent.PatColor:
 			{
-				Log(string.Format("DWord: {0} = 0x{1:X6} ({2})", ev, data, new FLColor3(data)));
+				LogLine(string.Format("DWord: {0} = 0x{1:X6} ({2})", ev, data, new FLColor3(data)));
 				break;
 			}
 			case FLEvent.DelayReso:
@@ -179,14 +174,14 @@ internal sealed class FLProjectReader
 			case FLEvent.Unk_158:
 			case FLEvent.NewTimeMarker:
 			{
-				Log(string.Format("DWord: {0} = 0x{1:X}", ev, data));
+				LogLine(string.Format("DWord: {0} = 0x{1:X}", ev, data));
 				break;
 			}
 			default:
 			{
 				CheckEventExists(ev);
 
-				Log(string.Format("DWord: {0} = {1}", ev, data));
+				LogLine(string.Format("DWord: {0} = {1}", ev, data));
 				break;
 			}
 		}
@@ -221,7 +216,7 @@ internal sealed class FLProjectReader
 				str = BytesString(text);
 			}
 		}
-		Log(string.Format("{0}: {1} - {2} = {3}",
+		LogLine(string.Format("{0}: {1} - {2} = {3}",
 			type, ev, text.Length, str));
 	}
 
@@ -229,20 +224,20 @@ internal sealed class FLProjectReader
 	{
 		if (!Enum.IsDefined(ev))
 		{
-			_log.AppendLine("!!!!!!!!!!!!!!! UNDEFINED EVENT " + ev + " !!!!!!!!!!!!!!!");
+			Log.AppendLine("!!!!!!!!!!!!!!! UNDEFINED EVENT " + ev + " !!!!!!!!!!!!!!!");
 		}
 	}
 	private void LogPos(long pos)
 	{
-		_log.Append($"@ 0x{pos:X}\t");
+		Log.Append($"@ 0x{pos:X}\t");
 		if (pos < 0x1000)
 		{
-			_log.Append('\t');
+			Log.Append('\t');
 		}
 	}
-	private void Log(string msg)
+	private void LogLine(string msg)
 	{
-		_log.AppendLine(msg);
+		Log.AppendLine(msg);
 	}
 	private static string DecodeString(Encoding e, byte[] bytes)
 	{

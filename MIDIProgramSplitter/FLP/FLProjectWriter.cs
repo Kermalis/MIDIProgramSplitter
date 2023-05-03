@@ -6,7 +6,7 @@ using System.Text;
 
 namespace MIDIProgramSplitter.FLP;
 
-internal sealed class FLProjectWriter
+public sealed class FLProjectWriter
 {
 	/// <summary>The project was started on 26/4/23 17:20. Total time spent on it: 4 minutes? This is probably the wrong file</summary>
 	private static ReadOnlySpan<byte> ProjectTime_Default => new byte[16] { 0xC5, 0x8D, 0x96, 0x1D, 0x57, 0xFE, 0xE5, 0x40, 0x00, 0x00, 0x00, 0x50, 0xAA, 0x93, 0x25, 0x3F };
@@ -124,22 +124,22 @@ internal sealed class FLProjectWriter
 		w.WriteUInt32(length);
 	}
 
-	public static void WriteByteEvent(EndianBinaryWriter w, FLEvent ev, byte data)
+	internal static void WriteByteEvent(EndianBinaryWriter w, FLEvent ev, byte data)
 	{
 		w.WriteEnum(ev);
 		w.WriteByte(data);
 	}
-	public static void WriteWordEvent(EndianBinaryWriter w, FLEvent ev, ushort data)
+	internal static void WriteWordEvent(EndianBinaryWriter w, FLEvent ev, ushort data)
 	{
 		w.WriteEnum(ev);
 		w.WriteUInt16(data);
 	}
-	public static void WriteDWordEvent(EndianBinaryWriter w, FLEvent ev, uint data)
+	internal static void WriteDWordEvent(EndianBinaryWriter w, FLEvent ev, uint data)
 	{
 		w.WriteEnum(ev);
 		w.WriteUInt32(data);
 	}
-	public static void WriteTextEventLength(EndianBinaryWriter w, uint length)
+	internal static void WriteTextEventLength(EndianBinaryWriter w, uint length)
 	{
 		// TODO: How many bytes can this len use?
 		while (true)
@@ -154,15 +154,15 @@ internal sealed class FLProjectWriter
 			length >>= 7;
 		}
 	}
-	public static void WriteUTF8EventWithLength(EndianBinaryWriter w, FLEvent ev, string str)
+	internal static void WriteUTF8EventWithLength(EndianBinaryWriter w, FLEvent ev, string str)
 	{
 		WriteBytesEventWithLength(w, ev, Encoding.UTF8.GetBytes(str));
 	}
-	public static void WriteUTF16EventWithLength(EndianBinaryWriter w, FLEvent ev, string str)
+	internal static void WriteUTF16EventWithLength(EndianBinaryWriter w, FLEvent ev, string str)
 	{
 		WriteBytesEventWithLength(w, ev, Encoding.Unicode.GetBytes(str));
 	}
-	public static void WriteBytesEventWithLength(EndianBinaryWriter w, FLEvent ev, ReadOnlySpan<byte> bytes)
+	internal static void WriteBytesEventWithLength(EndianBinaryWriter w, FLEvent ev, ReadOnlySpan<byte> bytes)
 	{
 		w.WriteEnum(ev);
 		WriteTextEventLength(w, (uint)bytes.Length);

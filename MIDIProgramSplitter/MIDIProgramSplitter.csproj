@@ -2,21 +2,18 @@
 
 	<PropertyGroup>
 		<TargetFramework>net7.0</TargetFramework>
-		<OutputType>Exe</OutputType>
+		<OutputType>Library</OutputType>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+		<RootNamespace Label="MIDIProgramSplitter" />
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="EndianBinaryIO" Version="2.1.0" />
 		<Reference Include="KMIDI">
-			<HintPath>Dependencies\KMIDI.dll</HintPath>
+			<HintPath>..\Shared Dependencies\KMIDI.dll</HintPath>
 		</Reference>
 	</ItemGroup>
-
-	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
-		<DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
-	</PropertyGroup>
 
 </Project>

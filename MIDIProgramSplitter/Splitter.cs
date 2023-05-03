@@ -5,7 +5,7 @@ using System.IO;
 
 namespace MIDIProgramSplitter;
 
-internal sealed partial class Splitter
+public sealed partial class Splitter
 {
 	private readonly MIDIFile _inMIDI;
 	private readonly uint _maxTicks;

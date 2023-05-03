@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace MIDIProgramSplitter.FLP;
 
-internal sealed class FLPattern
+public sealed class FLPattern
 {
 	public readonly List<FLPatternNote> Notes;
 	public FLColor3? Color;
@@ -15,7 +15,7 @@ internal sealed class FLPattern
 		Notes = new List<FLPatternNote>();
 	}
 
-	public void WritePatternNotes(EndianBinaryWriter w)
+	internal void WritePatternNotes(EndianBinaryWriter w)
 	{
 		// Must be in order of AbsoluteTick
 		Notes.Sort((n1, n2) => n1.AbsoluteTick.CompareTo(n2.AbsoluteTick));
@@ -27,7 +27,7 @@ internal sealed class FLPattern
 			note.Write(w);
 		}
 	}
-	public void WriteColorAndNameIfNecessary(EndianBinaryWriter w, ushort id)
+	internal void WriteColorAndNameIfNecessary(EndianBinaryWriter w, ushort id)
 	{
 		if (Name is not null)
 		{

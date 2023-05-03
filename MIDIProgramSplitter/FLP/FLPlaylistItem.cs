@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace MIDIProgramSplitter.FLP;
 
-internal sealed class FLPlaylistItem
+public sealed class FLPlaylistItem
 {
-	public const int LEN = 32;
+	internal const int LEN = 32;
 
 	// For patterns:
 	// @00-03 AbsoluteTick
@@ -70,7 +70,7 @@ internal sealed class FLPlaylistItem
 		PlaylistTrack = track;
 	}
 
-	public void Write(EndianBinaryWriter w, List<FLPattern> pats, int numChans, List<FLAutomation> autos, List<FLPlaylistTrack> tracks)
+	internal void Write(EndianBinaryWriter w, List<FLPattern> pats, int numChans, List<FLAutomation> autos, List<FLPlaylistTrack> tracks)
 	{
 		w.WriteUInt32(AbsoluteTick);
 		w.WriteUInt16(0x5000);

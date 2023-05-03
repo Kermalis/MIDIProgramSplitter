@@ -2,7 +2,7 @@
 
 namespace MIDIProgramSplitter.FLP;
 
-internal sealed class FLPlaylistMarker
+public sealed class FLPlaylistMarker
 {
 	public uint AbsoluteTicks;
 	/// <summary>Empty uses default name "Marker #1" for example</summary>
@@ -16,7 +16,7 @@ internal sealed class FLPlaylistMarker
 		TimeSig = timeSig;
 	}
 
-	public void Write(EndianBinaryWriter w)
+	internal void Write(EndianBinaryWriter w)
 	{
 		uint add = TimeSig is null ? 0u : 0x08_000_000;
 		FLProjectWriter.WriteDWordEvent(w, FLEvent.NewTimeMarker, AbsoluteTicks + add);

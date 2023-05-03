@@ -6,12 +6,12 @@ partial class FLAutomation
 {
 	public struct Point
 	{
-		public const int LEN = 24;
+		internal const int LEN = 24;
 
 		public uint AbsoluteTicks;
 		public double Value;
 
-		public void Write(EndianBinaryWriter w, uint ppqn, bool isFirst, bool isLast, uint nextPointAbsoluteTicks)
+		internal void Write(EndianBinaryWriter w, uint ppqn, bool isFirst, bool isLast, uint nextPointAbsoluteTicks)
 		{
 			w.WriteDouble(Value);
 			w.WriteSingle(0f); // Tension

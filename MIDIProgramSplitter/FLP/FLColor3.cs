@@ -1,6 +1,6 @@
 ﻿namespace MIDIProgramSplitter.FLP;
 
-internal struct FLColor3
+public struct FLColor3
 {
 	public byte R;
 	public byte G;

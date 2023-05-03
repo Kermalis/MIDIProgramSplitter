@@ -35,19 +35,16 @@ partial class TrackData
 		pTrack.Name = "T" + (_trackIndex + 1) + 'C' + (_trackChannel + 1);
 
 		int ourChanID = 0;
-		int patID = 1;
-		foreach (KeyValuePair<MIDIProgram, NewTrack> kvp in dict)
+		int ourPatID = 1;
+		foreach (NewTrack newT in dict.Values)
 		{
-			MIDIProgram program = kvp.Key;
-			NewTrack newT = kvp.Value;
-
 			FLChannel ourChan = ourChans[ourChanID++];
 			ushort chanID = (ushort)w.Channels.IndexOf(ourChan);
 
 			// TODO: In johto trainer, the first pattern of the first track is going to the bottom...
 			foreach (NewTrackPattern newP in newT.Patterns)
 			{
-				string name = string.Format("{0} #{1} - {2}", pTrack.Name, patID++, program);
+				string name = string.Format("{0} #{1} - {2}", pTrack.Name, ourPatID++, newT.Program);
 				newP.AddToFLP(w, chanID, pTrack, name);
 			}
 		}
