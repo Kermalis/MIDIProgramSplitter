@@ -6,8 +6,8 @@
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		
-		<RootNamespace Label="MIDIProgramSplitter.CMD" />
+
+		<RootNamespace>MIDIProgramSplitter.CMD</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
