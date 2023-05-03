@@ -6,17 +6,16 @@ namespace MIDIProgramSplitter.FLP;
 
 public sealed class FLChannel
 {
-	private static ReadOnlySpan<byte> NewPlugin_DeselectedTopLeft => new byte[52]
+	/// <summary>Found in "Miscellaneous functions" of a channel. Automation channels have it too, despite that not being accessible in the GUI</summary>
+	internal static ReadOnlySpan<byte> Delay => new byte[20]
 	{
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x54, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00,
-		0x04, 0x00, // Selection/pos related. Was 0x0112 when selected, then 0x0004 when deselected in the same pos.
-		0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00
+		0x00, 0x00, // 0-1: EchoFeed
+		0x00, 0x00, 0x00, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x04, // 12: Echoes default=(4)
+		0x00, 0x00, 0x00,
+		0x90, 0x00, // 16-17: EchoTime default=(0x90 = 144 => 3:00)
+		0x00, 0x00
 	};
-
-	internal static ReadOnlySpan<byte> Delay => new byte[20] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x90, 0x00, 0x00, 0x00 };
 	private static ReadOnlySpan<byte> BasicChanParams => new byte[24] { 0x00, 0x19, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	internal static ReadOnlySpan<byte> ChanOfsLevels => new byte[20] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	private static ReadOnlySpan<byte> ChanPoly => new byte[9] { 0x00, 0x00, 0x00, 0x00, 0xF4, 0x01, 0x00, 0x00, 0x00 };
@@ -100,53 +99,53 @@ public sealed class FLChannel
 
 	internal void Write(EndianBinaryWriter w, ushort id, uint filterNum)
 	{
-		FLProjectWriter.WriteWordEvent(w, FLEvent.NewChannel, id);
-		FLProjectWriter.WriteByteEvent(w, FLEvent.ChannelType, (byte)FLChanType.Osc3x_MIDIOut);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.NewChannel, id);
+		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelType, (byte)FLChanType.Osc3x_MIDIOut);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "MIDI Out\0");
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.NewPlugin, NewPlugin_DeselectedTopLeft);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.NewPlugin, FLNewPlugin.MIDIOut_NewPlugin_DeselectedTopLeft);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PluginName, Name + '\0');
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.PluginIcon, 0);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.Color, 0x73725E);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginIcon, 0);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.Color, 0x73725E);
 		WritePluginParams(w);
-		FLProjectWriter.WriteByteEvent(w, FLEvent.ChannelIsEnabled, 1);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.Delay, Delay);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.DelayReso, 0x800_080);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.Reverb, 0x10_000);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.ShiftDelay, 0);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.SwingMix, 0x80);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.FX, 0x80);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.FX3, 0x100);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.CutOff, 0x400);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.Resonance, 0);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.PreAmp, 0);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.Decay, 0);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.Attack, 0);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.StDel, 0x800);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.FXSine, 0x800_000);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.Fade_Stereo, 0);
-		FLProjectWriter.WriteByteEvent(w, FLEvent.TargetFXTrack, 0);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.BasicChanParams, BasicChanParams);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChanOfsLevels, ChanOfsLevels);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChanPoly, ChanPoly);
+		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelIsEnabled, 1);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.Delay, Delay);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.DelayReso, 0x800_080);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.Reverb, 0x10_000);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.ShiftDelay, 0);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.SwingMix, 0x80);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.FX, 0x80);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.FX3, 0x100);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.CutOff, 0x400);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.Resonance, 0);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.PreAmp, 0);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.Decay, 0);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.Attack, 0);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.StDel, 0x800);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.FXSine, 0x800_000);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.Fade_Stereo, (ushort)FLFadeStereo.None);
+		FLProjectWriter.Write8BitEvent(w, FLEvent.TargetFXTrack, 0);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.BasicChanParams, BasicChanParams);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChanOfsLevels, ChanOfsLevels);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChanPoly, ChanPoly);
 		WriteChanParams(w, id);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.CutCutBy, (uint)(id + 1) * 0x10_001u);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.ChannelLayerFlags, 0);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.ChanFilterNum, filterNum);
-		FLProjectWriter.WriteByteEvent(w, FLEvent.Unk_32, 0);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelTracking, Tracking0);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelTracking, Tracking1);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, EnvelopeOther);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, Envelope1);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, EnvelopeOther);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, EnvelopeOther);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, EnvelopeOther);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.ChannelSampleFlags, 0b1010);
-		FLProjectWriter.WriteByteEvent(w, FLEvent.ChannelLoopType, 0);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.CutCutBy, (uint)(id + 1) * 0x10_001u);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.ChannelLayerFlags, 0);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.ChanFilterNum, filterNum);
+		FLProjectWriter.Write8BitEvent(w, FLEvent.Unk_32, 0);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelTracking, Tracking0);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelTracking, Tracking1);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelEnvelope, EnvelopeOther);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelEnvelope, Envelope1);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelEnvelope, EnvelopeOther);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelEnvelope, EnvelopeOther);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelEnvelope, EnvelopeOther);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.ChannelSampleFlags, 0b1010);
+		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelLoopType, 0);
 	}
 	private void WritePluginParams(EndianBinaryWriter w)
 	{
 		w.WriteEnum(FLEvent.PluginParams);
-		FLProjectWriter.WriteTextEventLength(w, 383);
+		FLProjectWriter.WriteArrayEventLength(w, 383);
 		w.WriteBytes(PluginParamsPart1);
 		w.WriteByte(MIDIChannel);
 		w.WriteBytes(PluginParamsPart2);
@@ -156,7 +155,7 @@ public sealed class FLChannel
 	private static void WriteChanParams(EndianBinaryWriter w, ushort id)
 	{
 		w.WriteEnum(FLEvent.ChannelParams);
-		FLProjectWriter.WriteTextEventLength(w, 168);
+		FLProjectWriter.WriteArrayEventLength(w, 168);
 		w.WriteBytes(ChanParamsPart1);
 		w.WriteByte((byte)id);
 		w.WriteBytes(ChanParamsPart2);

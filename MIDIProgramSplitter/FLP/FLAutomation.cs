@@ -20,16 +20,6 @@ public sealed partial class FLAutomation
 	private const int TWO_POINT_LEN = 181;
 	private const int NO_POINT_LEN = TWO_POINT_LEN - (2 * Point.LEN);
 
-	private static ReadOnlySpan<byte> NewPlugin_DeselectedTopLeft => new byte[52]
-	{
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00,
-		0x54, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00,
-		0x06, 0x00,
-		0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00
-	};
-
 	// Contains min/max values. Max length also?
 	private static ReadOnlySpan<byte> BasicChanParams => new byte[24] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	private static ReadOnlySpan<byte> ChanPoly => new byte[9] { 0x01, 0x00, 0x00, 0x00, 0xF4, 0x01, 0x00, 0x00, 0x00 };
@@ -110,55 +100,55 @@ public sealed partial class FLAutomation
 
 	internal void Write(EndianBinaryWriter w, ushort id, uint filterNum, uint ppqn)
 	{
-		FLProjectWriter.WriteWordEvent(w, FLEvent.NewChannel, id);
-		FLProjectWriter.WriteByteEvent(w, FLEvent.ChannelType, (byte)FLChanType.Automation);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.NewChannel, id);
+		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelType, (byte)FLChanType.Automation);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "\0");
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.NewPlugin, NewPlugin_DeselectedTopLeft);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.NewPlugin, FLNewPlugin.Automation_NewPlugin_DeselectedTopLeft);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PluginName, Name + '\0');
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.PluginIcon, 0);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.Color, 0x60608E);
-		FLProjectWriter.WriteByteEvent(w, FLEvent.ChannelIsEnabled, 1);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.Delay, FLChannel.Delay);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.DelayReso, 0x800_080);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.Reverb, 0x10_000);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.ShiftDelay, 0);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.SwingMix, 0x80);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.FX, 0x80);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.FX3, 0x100);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.CutOff, 0x400);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.Resonance, 0);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.PreAmp, 0);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.Decay, 0);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.Attack, 0);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.StDel, 0x800);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.FXSine, 0x800_000);
-		FLProjectWriter.WriteWordEvent(w, FLEvent.Fade_Stereo, 0);
-		FLProjectWriter.WriteByteEvent(w, FLEvent.TargetFXTrack, 0);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.BasicChanParams, BasicChanParams);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChanOfsLevels, FLChannel.ChanOfsLevels);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChanPoly, ChanPoly);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelParams, ChanParams);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.CutCutBy, 0);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.ChannelLayerFlags, 0);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.ChanFilterNum, filterNum);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginIcon, 0);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.Color, 0x60608E);
+		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelIsEnabled, 1);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.Delay, FLChannel.Delay);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.DelayReso, 0x800_080);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.Reverb, 0x10_000);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.ShiftDelay, 0);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.SwingMix, 0x80);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.FX, 0x80);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.FX3, 0x100);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.CutOff, 0x400);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.Resonance, 0);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.PreAmp, 0);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.Decay, 0);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.Attack, 0);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.StDel, 0x800);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.FXSine, 0x800_000);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.Fade_Stereo, (ushort)FLFadeStereo.None);
+		FLProjectWriter.Write8BitEvent(w, FLEvent.TargetFXTrack, 0);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.BasicChanParams, BasicChanParams);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChanOfsLevels, FLChannel.ChanOfsLevels);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChanPoly, ChanPoly);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelParams, ChanParams);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.CutCutBy, 0);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.ChannelLayerFlags, 0);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.ChanFilterNum, filterNum);
 		WriteData(w, ppqn);
-		FLProjectWriter.WriteByteEvent(w, FLEvent.Unk_32, 0);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelTracking, FLChannel.Tracking0);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelTracking, FLChannel.Tracking1);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.Envelope1);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
-		FLProjectWriter.WriteBytesEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.ChannelSampleFlags, 0b0011);
-		FLProjectWriter.WriteByteEvent(w, FLEvent.ChannelLoopType, 0);
+		FLProjectWriter.Write8BitEvent(w, FLEvent.Unk_32, 0);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelTracking, FLChannel.Tracking0);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelTracking, FLChannel.Tracking1);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.Envelope1);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
+		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelEnvelope, FLChannel.EnvelopeOther);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.ChannelSampleFlags, 0b0011);
+		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelLoopType, 0);
 	}
 	private void WriteData(EndianBinaryWriter w, uint ppqn)
 	{
 		w.WriteEnum(FLEvent.AutomationData);
 
 		uint numPoints = (uint)Points.Count;
-		FLProjectWriter.WriteTextEventLength(w, NO_POINT_LEN + (numPoints * Point.LEN));
+		FLProjectWriter.WriteArrayEventLength(w, NO_POINT_LEN + (numPoints * Point.LEN));
 
 		w.WriteUInt32(1);
 		w.WriteUInt32(0x40);
@@ -218,7 +208,7 @@ public sealed partial class FLAutomation
 	private void WriteAutomationConnection(EndianBinaryWriter w, ushort automationChannelID, ushort targetID)
 	{
 		w.WriteEnum(FLEvent.AutomationConnection);
-		FLProjectWriter.WriteTextEventLength(w, 20);
+		FLProjectWriter.WriteArrayEventLength(w, 20);
 
 		w.WriteUInt16(0);
 		w.WriteUInt16(automationChannelID);

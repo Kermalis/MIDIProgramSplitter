@@ -28,7 +28,7 @@ public sealed class FLPlaylistTrack
 	internal void Write(EndianBinaryWriter w, int index)
 	{
 		w.WriteEnum(FLEvent.NewPlaylistTrack);
-		FLProjectWriter.WriteTextEventLength(w, 66);
+		FLProjectWriter.WriteArrayEventLength(w, 66);
 		w.WriteUInt16((ushort)(index + 1));
 		w.WriteBytes(Part1);
 		w.WriteByte(index <= 0x20 ? (byte)0xF0 : (byte)0xFF); // TODO: Why

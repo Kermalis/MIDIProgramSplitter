@@ -2,7 +2,7 @@
 
 internal enum FLEvent : byte
 {
-	// BYTE EVENTS
+	// 8bit
 	ChannelIsEnabled = 0x00,
 	NoteOn,
 	ChannelVolume,
@@ -26,6 +26,7 @@ internal enum FLEvent : byte
 	ProjectTimeSigDenominator,
 	UseLoopPoints,
 	ChannelLoopType,
+	/// <summary><see cref="FLChanType"/></summary>
 	ChannelType,
 	TargetFXTrack,
 	/// <summary>0 for circular, 2 for triangular</summary>
@@ -49,13 +50,14 @@ internal enum FLEvent : byte
 	Unk_39, // 0
 	ShouldCutNotesFast,
 
-	// WORD EVENTS
+	// 16bit
 	NewChannel = 0x40,
 	NewPattern,
 	Tempo,
 	SelectedPatternNum,
 	PatData,
 	FX,
+	/// <summary><see cref="FLFadeStereo"/></summary>
 	Fade_Stereo,
 	CutOff,
 	DotVol,
@@ -82,14 +84,14 @@ internal enum FLEvent : byte
 	DotShift,
 	TempoFine,
 	LayerChan,
-	FXIcon,
+	InsertIcon,
 	DotRel,
 	SwingMix,
-	Unk_98, // 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+	NewInsertSlot, // 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 	NewArrangement,
 	CurArrangementNum,
 
-	// DWORD EVENTS
+	// 32bit
 	Color = 0x80,
 	PlaylistItem,
 	Echo,
@@ -111,17 +113,17 @@ internal enum FLEvent : byte
 	ChannelLayerFlags,
 	ChanFilterNum,
 	CurFilterNum,
-	/// <summary>FX track output channel - 0xFFFFFFFF for none</summary>
-	FXOutChanNum,
+	/// <summary>Insert track output channel - 0xFFFFFFFF for none</summary>
+	InsertOutChanNum,
 	/// <summary>+ Time and Mode in higher bits</summary>
 	NewTimeMarker,
-	FXColor,
-	PatColor,
-	PatAutoMode,
+	InsertColor,
+	PatternColor,
+	PatternAutoMode,
 	SongLoopPos,
 	AUSmpRate,
-	/// <summary>FX track input channel - 0xFFFFFFFF for none</summary>
-	FXInChanNum,
+	/// <summary>Insert track input channel - 0xFFFFFFFF for none</summary>
+	InsertInChanNum,
 	PluginIcon,
 	/// <summary>Value like 0xC0D40100</summary>
 	FineTempo,
@@ -132,7 +134,7 @@ internal enum FLEvent : byte
 	Unk_165, // 3
 	Unk_166, // 1
 
-	// TEXT EVENTS
+	// array
 	ChannelName = 0xC0,
 	PatternName,
 	ProjectTitle,
@@ -149,7 +151,7 @@ internal enum FLEvent : byte
 	ProjectDataPath,
 	/// <summary>Plugin's name</summary>
 	PluginName,
-	FXName,
+	InsertName,
 	TimeMarkerName,
 	ProjectGenre,
 	ProjectAuthor,
@@ -173,8 +175,7 @@ internal enum FLEvent : byte
 	NoteEvents,
 	PatternEvents,
 	PatternNotes,
-	/// <summary>Init values for automated events</summary>
-	InitCtrlRecChan,
+	MixerParams,
 	MIDIInfo,
 	AutomationConnection,
 	/// <summary>Vol/kb tracking</summary>
@@ -187,8 +188,8 @@ internal enum FLEvent : byte
 	RegBlackList,
 	PlaylistItems,
 	AutomationData,
-	FXRouting,
-	FXParams,
+	InsertRouting,
+	InsertParams,
 	/// <summary>Value like: 10 DF D7 ED 3B A4 E5 40 00 00 00 E0 C9 BE 32 3F</summary>
 	ProjectTime,
 	NewPlaylistTrack,

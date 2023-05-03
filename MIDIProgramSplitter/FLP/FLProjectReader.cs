@@ -15,6 +15,14 @@ public sealed class FLProjectReader
 	{
 		var r = new EndianBinaryReader(s, ascii: true);
 
+		ReadHeaderChunk(r, out PPQN);
+
+		Log = new StringBuilder();
+
+		ReadDataChunk(r);
+	}
+	private static void ReadHeaderChunk(EndianBinaryReader r, out ushort ppqn)
+	{
 		Span<char> chars = stackalloc char[4];
 		r.ReadChars(chars);
 
@@ -41,9 +49,11 @@ public sealed class FLProjectReader
 			throw new InvalidDataException();
 		}
 
-		PPQN = r.ReadUInt16();
-
-		// Now data chunk
+		ppqn = r.ReadUInt16();
+	}
+	private void ReadDataChunk(EndianBinaryReader r)
+	{
+		Span<char> chars = stackalloc char[4];
 		r.ReadChars(chars);
 
 		if (!chars.SequenceEqual("FLdt"))
@@ -57,40 +67,34 @@ public sealed class FLProjectReader
 			throw new InvalidDataException();
 		}
 
-		Log = new StringBuilder();
-
-		ReadData(r);
-	}
-	private void ReadData(EndianBinaryReader r)
-	{
 		while (r.Stream.Position < r.Stream.Length)
 		{
 			LogPos(r.Stream.Position);
 
 			FLEvent ev = r.ReadEnum<FLEvent>();
-			uint data = ReadDataForEvent(r, ev, out byte[]? text);
+			uint data = ReadDataForEvent(r, ev, out byte[]? bytes);
 
 			if (ev < FLEvent.NewChannel)
 			{
-				HandleEvent_Byte(ev, data);
+				HandleEvent_8Bit(ev, data);
 			}
 			else if (ev is >= FLEvent.NewChannel and < FLEvent.Color)
 			{
-				HandleEvent_Word(ev, data);
+				HandleEvent_16Bit(ev, data);
 			}
 			else if (ev is >= FLEvent.Color and < FLEvent.ChannelName)
 			{
-				HandleEvent_DWord(ev, data);
+				HandleEvent_32Bit(ev, data);
 			}
 			else // >= FLEvent.ChanName
 			{
-				HandleEvent_Text(ev, text!);
+				HandleEvent_Array(ev, bytes!);
 			}
 		}
 	}
-	private static uint ReadDataForEvent(EndianBinaryReader r, FLEvent ev, out byte[]? text)
+	private static uint ReadDataForEvent(EndianBinaryReader r, FLEvent ev, out byte[]? bytes)
 	{
-		text = null;
+		bytes = null;
 
 		uint data = r.ReadByte();
 
@@ -106,13 +110,13 @@ public sealed class FLProjectReader
 		if (ev >= FLEvent.ChannelName)
 		{
 			// Only have the first byte in data currently
-			text = new byte[ReadTextLen(r, data)];
-			r.ReadBytes(text);
+			bytes = new byte[ReadArrayLen(r, data)];
+			r.ReadBytes(bytes);
 		}
 
 		return data;
 	}
-	private void HandleEvent_Byte(FLEvent ev, uint data)
+	private void HandleEvent_8Bit(FLEvent ev, uint data)
 	{
 		switch (ev)
 		{
@@ -130,10 +134,15 @@ public sealed class FLProjectReader
 			}
 		}
 	}
-	private void HandleEvent_Word(FLEvent ev, uint data)
+	private void HandleEvent_16Bit(FLEvent ev, uint data)
 	{
 		switch (ev)
 		{
+			case FLEvent.Fade_Stereo:
+			{
+				LogLine(string.Format("Word: {0} = 0x{1:X} ({2})", ev, data, (FLFadeStereo)data));
+				break;
+			}
 			case FLEvent.SwingMix:
 			case FLEvent.FX:
 			case FLEvent.FX3:
@@ -152,12 +161,13 @@ public sealed class FLProjectReader
 			}
 		}
 	}
-	private void HandleEvent_DWord(FLEvent ev, uint data)
+	private void HandleEvent_32Bit(FLEvent ev, uint data)
 	{
 		switch (ev)
 		{
 			case FLEvent.Color:
-			case FLEvent.PatColor:
+			case FLEvent.PatternColor:
+			case FLEvent.InsertColor:
 			{
 				LogLine(string.Format("DWord: {0} = 0x{1:X6} ({2})", ev, data, new FLColor3(data)));
 				break;
@@ -168,8 +178,8 @@ public sealed class FLProjectReader
 			case FLEvent.CutCutBy:
 			case FLEvent.ChannelLayerFlags:
 			case FLEvent.ChannelSampleFlags:
-			case FLEvent.FXInChanNum:
-			case FLEvent.FXOutChanNum:
+			case FLEvent.InsertInChanNum:
+			case FLEvent.InsertOutChanNum:
 			case FLEvent.Unk_157:
 			case FLEvent.Unk_158:
 			case FLEvent.NewTimeMarker:
@@ -186,7 +196,7 @@ public sealed class FLProjectReader
 			}
 		}
 	}
-	private void HandleEvent_Text(FLEvent ev, byte[] text)
+	private void HandleEvent_Array(FLEvent ev, byte[] bytes)
 	{
 		string type;
 		string str;
@@ -194,7 +204,12 @@ public sealed class FLProjectReader
 		if (ev == FLEvent.AutomationData)
 		{
 			type = "Bytes";
-			str = FLAutomation.ReadData(text);
+			str = FLAutomation.ReadData(bytes);
+		}
+		else if (ev == FLEvent.MixerParams)
+		{
+			type = "Bytes";
+			str = FLMixerParams.ReadData(bytes);
 		}
 		else
 		{
@@ -203,30 +218,23 @@ public sealed class FLProjectReader
 			if (IsUTF8(ev))
 			{
 				type = "UTF8";
-				str = DecodeString(Encoding.UTF8, text);
+				str = DecodeString(Encoding.UTF8, bytes);
 			}
 			else if (IsUTF16(ev))
 			{
 				type = "UTF16";
-				str = DecodeString(Encoding.Unicode, text);
+				str = DecodeString(Encoding.Unicode, bytes);
 			}
 			else
 			{
 				type = "Bytes";
-				str = BytesString(text);
+				str = BytesString(bytes);
 			}
 		}
 		LogLine(string.Format("{0}: {1} - {2} = {3}",
-			type, ev, text.Length, str));
+			type, ev, bytes.Length, str));
 	}
 
-	private void CheckEventExists(FLEvent ev)
-	{
-		if (!Enum.IsDefined(ev))
-		{
-			Log.AppendLine("!!!!!!!!!!!!!!! UNDEFINED EVENT " + ev + " !!!!!!!!!!!!!!!");
-		}
-	}
 	private void LogPos(long pos)
 	{
 		Log.Append($"@ 0x{pos:X}\t");
@@ -239,6 +247,7 @@ public sealed class FLProjectReader
 	{
 		Log.AppendLine(msg);
 	}
+
 	private static string DecodeString(Encoding e, byte[] bytes)
 	{
 		string str = e.GetString(bytes)
@@ -255,6 +264,7 @@ public sealed class FLProjectReader
 		}
 		return "[0x" + string.Join(", 0x", bytes.Select(b => b.ToString("X2"))) + ']';
 	}
+
 	// https://github.com/jdstmporter/FLPFiles/tree/main/src/FLP/messagetypes
 	private static bool IsObsolete(FLEvent ev)
 	{
@@ -280,7 +290,7 @@ public sealed class FLProjectReader
 			case FLEvent.PlaylistItem: // PlaylistItems now
 			case FLEvent.MainResoCutOff:
 			case FLEvent.SSNote:
-			case FLEvent.PatAutoMode:
+			case FLEvent.PatternAutoMode:
 
 			// Text
 			case FLEvent.ChannelName: // PluginName is used now
@@ -310,7 +320,7 @@ public sealed class FLProjectReader
 			case FLEvent.DefPluginName:
 			case FLEvent.ProjectDataPath:
 			case FLEvent.PluginName:
-			case FLEvent.FXName:
+			case FLEvent.InsertName:
 			case FLEvent.TimeMarkerName:
 			case FLEvent.ProjectGenre:
 			case FLEvent.ProjectAuthor:
@@ -323,8 +333,15 @@ public sealed class FLProjectReader
 		}
 		return false;
 	}
+	private void CheckEventExists(FLEvent ev)
+	{
+		if (!Enum.IsDefined(ev))
+		{
+			LogLine("!!!!!!!!!!!!!!! UNDEFINED EVENT " + ev + " !!!!!!!!!!!!!!!");
+		}
+	}
 
-	private static uint ReadTextLen(EndianBinaryReader r, uint curByte)
+	private static uint ReadArrayLen(EndianBinaryReader r, uint curByte)
 	{
 		// TODO: How many bytes can this len use?
 		uint len = curByte & 0x7F;

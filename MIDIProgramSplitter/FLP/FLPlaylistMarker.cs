@@ -19,13 +19,13 @@ public sealed class FLPlaylistMarker
 	internal void Write(EndianBinaryWriter w)
 	{
 		uint add = TimeSig is null ? 0u : 0x08_000_000;
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.NewTimeMarker, AbsoluteTicks + add);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.NewTimeMarker, AbsoluteTicks + add);
 
 		if (TimeSig is not null)
 		{
 			(byte num, byte denom) = TimeSig.Value;
-			FLProjectWriter.WriteByteEvent(w, FLEvent.TimeSigMarkerNumerator, num);
-			FLProjectWriter.WriteByteEvent(w, FLEvent.TimeSigMarkerDenominator, denom);
+			FLProjectWriter.Write8BitEvent(w, FLEvent.TimeSigMarkerNumerator, num);
+			FLProjectWriter.Write8BitEvent(w, FLEvent.TimeSigMarkerDenominator, denom);
 		}
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.TimeMarkerName, Name + '\0');
 	}

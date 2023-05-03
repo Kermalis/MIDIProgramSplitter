@@ -21,7 +21,7 @@ public sealed class FLPattern
 		Notes.Sort((n1, n2) => n1.AbsoluteTick.CompareTo(n2.AbsoluteTick));
 
 		w.WriteEnum(FLEvent.PatternNotes);
-		FLProjectWriter.WriteTextEventLength(w, (uint)Notes.Count * FLPatternNote.LEN);
+		FLProjectWriter.WriteArrayEventLength(w, (uint)Notes.Count * FLPatternNote.LEN);
 		foreach (FLPatternNote note in Notes)
 		{
 			note.Write(w);
@@ -43,12 +43,12 @@ public sealed class FLPattern
 			return;
 		}
 
-		FLProjectWriter.WriteWordEvent(w, FLEvent.NewPattern, id);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.PatColor, Color.Value.GetValue());
+		FLProjectWriter.Write16BitEvent(w, FLEvent.NewPattern, id);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.PatternColor, Color.Value.GetValue());
 		// Dunno what these are, but they are always these 3 values no matter what I touch in the color picker.
 		// Patterns don't have icons, and the preset name/colors don't affect it, so idk
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.Unk_157, uint.MaxValue);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.Unk_158, uint.MaxValue);
-		FLProjectWriter.WriteDWordEvent(w, FLEvent.Unk_164, 0);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.Unk_157, uint.MaxValue);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.Unk_158, uint.MaxValue);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.Unk_164, 0);
 	}
 }

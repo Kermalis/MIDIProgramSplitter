@@ -30,18 +30,6 @@ public sealed class FLProjectWriter
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00
 	};
-	private static ReadOnlySpan<byte> FruityLSD_NewPlugin => new byte[52]
-	{
-		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x44, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0xD3, 0x03, 0x00, 0x00, 0x37, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00
-	};
-
-	// 56364 bytes
-	// _initCtrlRecChan[9] is MainVolume. 50% => 25, 100% => 50, 125% => 62
-	// Insert volumes are stored in here as well.
-	private static readonly byte[] _initCtrlRecChan = File.ReadAllBytes("../../../../InitCtrlRecChan.bin");
 
 	public readonly List<FLChannel> Channels;
 	public readonly List<FLAutomation> Automations;
@@ -92,54 +80,52 @@ public sealed class FLProjectWriter
 	{
 		var w = new EndianBinaryWriter(s, ascii: true);
 
-		// Header chunk
+		WriteHeaderChunk(w);
+		WriteDataChunk(w);
+	}
+	private void WriteHeaderChunk(EndianBinaryWriter w)
+	{
 		w.WriteChars("FLhd");
 		w.WriteUInt32(6); // Length
 		w.WriteUInt16(0); // Format
 		w.WriteUInt16((ushort)(Channels.Count + Automations.Count));
 		w.WriteUInt16(PPQN);
-
-		// Data chunk
+	}
+	private void WriteDataChunk(EndianBinaryWriter w)
+	{
 		w.WriteChars("FLdt");
 
-		long dataLenOffset = s.Position;
+		long dataLenOffset = w.Stream.Position;
 		w.WriteUInt32(0); // Write length later
 
 		WriteProjectInfo(w);
 		WriteChannels(w);
 		WriteArrangement(w, 0);
 		WriteMoreStuffIDK(w);
-		WriteInsertMaster(w);
-		WriteInsert1(w); // Different because of Fruity LSD
-		for (int i = 0; i < 124; i++)
-		{
-			WriteInsert2Through125(w);
-		}
-		WriteInsertCurrent(w);
-		WriteEnding(w);
+		WriteMixer(w);
 
-		// Write data chunk length
-		uint length = (uint)(s.Length - (dataLenOffset + 4));
-		s.Position = dataLenOffset;
+		// Write chunk length
+		uint length = (uint)(w.Stream.Length - (dataLenOffset + 4));
+		w.Stream.Position = dataLenOffset;
 		w.WriteUInt32(length);
 	}
 
-	internal static void WriteByteEvent(EndianBinaryWriter w, FLEvent ev, byte data)
+	internal static void Write8BitEvent(EndianBinaryWriter w, FLEvent ev, byte data)
 	{
 		w.WriteEnum(ev);
 		w.WriteByte(data);
 	}
-	internal static void WriteWordEvent(EndianBinaryWriter w, FLEvent ev, ushort data)
+	internal static void Write16BitEvent(EndianBinaryWriter w, FLEvent ev, ushort data)
 	{
 		w.WriteEnum(ev);
 		w.WriteUInt16(data);
 	}
-	internal static void WriteDWordEvent(EndianBinaryWriter w, FLEvent ev, uint data)
+	internal static void Write32BitEvent(EndianBinaryWriter w, FLEvent ev, uint data)
 	{
 		w.WriteEnum(ev);
 		w.WriteUInt32(data);
 	}
-	internal static void WriteTextEventLength(EndianBinaryWriter w, uint length)
+	internal static void WriteArrayEventLength(EndianBinaryWriter w, uint length)
 	{
 		// TODO: How many bytes can this len use?
 		while (true)
@@ -156,54 +142,54 @@ public sealed class FLProjectWriter
 	}
 	internal static void WriteUTF8EventWithLength(EndianBinaryWriter w, FLEvent ev, string str)
 	{
-		WriteBytesEventWithLength(w, ev, Encoding.UTF8.GetBytes(str));
+		WriteArrayEventWithLength(w, ev, Encoding.UTF8.GetBytes(str));
 	}
 	internal static void WriteUTF16EventWithLength(EndianBinaryWriter w, FLEvent ev, string str)
 	{
-		WriteBytesEventWithLength(w, ev, Encoding.Unicode.GetBytes(str));
+		WriteArrayEventWithLength(w, ev, Encoding.Unicode.GetBytes(str));
 	}
-	internal static void WriteBytesEventWithLength(EndianBinaryWriter w, FLEvent ev, ReadOnlySpan<byte> bytes)
+	internal static void WriteArrayEventWithLength(EndianBinaryWriter w, FLEvent ev, ReadOnlySpan<byte> bytes)
 	{
 		w.WriteEnum(ev);
-		WriteTextEventLength(w, (uint)bytes.Length);
+		WriteArrayEventLength(w, (uint)bytes.Length);
 		w.WriteBytes(bytes);
 	}
 
 	private void WriteProjectInfo(EndianBinaryWriter w)
 	{
 		WriteUTF8EventWithLength(w, FLEvent.Version, "20.9.2.2963\0");
-		WriteDWordEvent(w, FLEvent.VersionBuildNumber, 2963);
-		WriteByteEvent(w, FLEvent.IsRegistered, 1); // TODO: Probably should make it 0 to avoid legal trouble? How does it authenticate this?
-		WriteByteEvent(w, FLEvent.Unk_37, 1); // Authentication related too?
+		Write32BitEvent(w, FLEvent.VersionBuildNumber, 2963);
+		Write8BitEvent(w, FLEvent.IsRegistered, 1); // TODO: Probably should make it 0 to avoid legal trouble? How does it authenticate this?
+		Write8BitEvent(w, FLEvent.Unk_37, 1); // Authentication related too?
 		WriteUTF16EventWithLength(w, FLEvent.RegistrationID, "d3@?4xufs49p1n?B>;?889\0"); // Probably shouldn't include this?
 
-		WriteDWordEvent(w, FLEvent.FineTempo, (uint)(CurrentTempo * 1_000));
-		WriteWordEvent(w, FLEvent.SelectedPatternNum, 1);
-		WriteByteEvent(w, FLEvent.IsSongMode, 1);
-		WriteByteEvent(w, FLEvent.Shuffle, 0);
-		WriteWordEvent(w, FLEvent.MasterPitch, 0);
-		WriteByteEvent(w, FLEvent.ProjectTimeSigNumerator, TimeSigNumerator);
-		WriteByteEvent(w, FLEvent.ProjectTimeSigDenominator, TimeSigDenominator);
-		WriteByteEvent(w, FLEvent.ProjectShouldUseTimeSignatures, 1);
-		WriteByteEvent(w, FLEvent.PanningLaw, 0); // Circular
-		WriteByteEvent(w, FLEvent.ShouldPlayTruncatedClipNotes, 1);
-		WriteByteEvent(w, FLEvent.ShouldShowInfoOnOpen, 0);
+		Write32BitEvent(w, FLEvent.FineTempo, (uint)(CurrentTempo * 1_000));
+		Write16BitEvent(w, FLEvent.SelectedPatternNum, 1);
+		Write8BitEvent(w, FLEvent.IsSongMode, 1);
+		Write8BitEvent(w, FLEvent.Shuffle, 0);
+		Write16BitEvent(w, FLEvent.MasterPitch, 0);
+		Write8BitEvent(w, FLEvent.ProjectTimeSigNumerator, TimeSigNumerator);
+		Write8BitEvent(w, FLEvent.ProjectTimeSigDenominator, TimeSigDenominator);
+		Write8BitEvent(w, FLEvent.ProjectShouldUseTimeSignatures, 1);
+		Write8BitEvent(w, FLEvent.PanningLaw, 0); // Circular
+		Write8BitEvent(w, FLEvent.ShouldPlayTruncatedClipNotes, 1);
+		Write8BitEvent(w, FLEvent.ShouldShowInfoOnOpen, 0);
 		WriteUTF16EventWithLength(w, FLEvent.ProjectTitle, "\0");
 		WriteUTF16EventWithLength(w, FLEvent.ProjectGenre, "\0");
 		WriteUTF16EventWithLength(w, FLEvent.ProjectAuthor, "\0");
 		WriteUTF16EventWithLength(w, FLEvent.ProjectDataPath, "\0");
 		WriteUTF16EventWithLength(w, FLEvent.ProjectComment, "\0");
 		// ProjectURL would go here
-		WriteBytesEventWithLength(w, FLEvent.ProjectTime, ProjectTime_Default);
+		WriteArrayEventWithLength(w, FLEvent.ProjectTime, ProjectTime_Default);
 
 		WriteChanFilters(w);
 		WritePatterns(w);
 
 		// No idea what these mean, but there are 3 and they're always the same in all my projects.
 		// Dunno if it's MIDI keyboard related or something, because I only have 1
-		WriteBytesEventWithLength(w, FLEvent.MIDIInfo, MIDIInfo0);
-		WriteBytesEventWithLength(w, FLEvent.MIDIInfo, MIDIInfo1);
-		WriteBytesEventWithLength(w, FLEvent.MIDIInfo, MIDIInfo2);
+		WriteArrayEventWithLength(w, FLEvent.MIDIInfo, MIDIInfo0);
+		WriteArrayEventWithLength(w, FLEvent.MIDIInfo, MIDIInfo1);
+		WriteArrayEventWithLength(w, FLEvent.MIDIInfo, MIDIInfo2);
 	}
 	private void WriteChanFilters(EndianBinaryWriter w)
 	{
@@ -212,28 +198,28 @@ public sealed class FLProjectWriter
 		{
 			WriteUTF16EventWithLength(w, FLEvent.ChanFilterName, "Automation\0");
 			WriteUTF16EventWithLength(w, FLEvent.ChanFilterName, "Unsorted\0");
-			WriteDWordEvent(w, FLEvent.CurFilterNum, 1);
+			Write32BitEvent(w, FLEvent.CurFilterNum, 1);
 		}
 		else
 		{
 			WriteUTF16EventWithLength(w, FLEvent.ChanFilterName, "Unsorted\0");
-			WriteDWordEvent(w, FLEvent.CurFilterNum, 0);
+			Write32BitEvent(w, FLEvent.CurFilterNum, 0);
 		}
 	}
 	private void WritePatterns(EndianBinaryWriter w)
 	{
 		if (Patterns.Count == 0)
 		{
-			WriteBytesEventWithLength(w, FLEvent.CtrlRecChan, Array.Empty<byte>());
+			WriteArrayEventWithLength(w, FLEvent.CtrlRecChan, Array.Empty<byte>());
 		}
 		else
 		{
 			// TODO: Why did this CtrlRecChan only show up sometimes?
 			// Bytes: CtrlRecChan - 12 = [0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x19, 0x00, 0x00]
-			WriteBytesEventWithLength(w, FLEvent.CtrlRecChan, Array.Empty<byte>()); // This appeared when resizing a pattern without changing it
+			WriteArrayEventWithLength(w, FLEvent.CtrlRecChan, Array.Empty<byte>()); // This appeared when resizing a pattern without changing it
 			for (int i = 0; i < Patterns.Count; i++)
 			{
-				WriteWordEvent(w, FLEvent.NewPattern, (ushort)(i + 1));
+				Write16BitEvent(w, FLEvent.NewPattern, (ushort)(i + 1));
 				Patterns[i].WritePatternNotes(w);
 			}
 		}
@@ -265,9 +251,9 @@ public sealed class FLProjectWriter
 	}
 	private void WriteArrangement(EndianBinaryWriter w, ushort arrangementIndex)
 	{
-		WriteWordEvent(w, FLEvent.NewArrangement, arrangementIndex);
+		Write16BitEvent(w, FLEvent.NewArrangement, arrangementIndex);
 		WriteUTF16EventWithLength(w, FLEvent.PlaylistArrangementName, "Arrangement\0");
-		WriteByteEvent(w, FLEvent.Unk_36, 0);
+		Write8BitEvent(w, FLEvent.Unk_36, 0);
 
 		// Playlist Items
 
@@ -275,7 +261,7 @@ public sealed class FLProjectWriter
 		PlaylistItems.Sort((p1, p2) => p1.AbsoluteTick.CompareTo(p2.AbsoluteTick));
 
 		w.WriteEnum(FLEvent.PlaylistItems);
-		WriteTextEventLength(w, (uint)PlaylistItems.Count * FLPlaylistItem.LEN);
+		WriteArrayEventLength(w, (uint)PlaylistItems.Count * FLPlaylistItem.LEN);
 		foreach (FLPlaylistItem item in PlaylistItems)
 		{
 			item.Write(w, Patterns, Channels.Count, Automations, PlaylistTracks);
@@ -295,102 +281,116 @@ public sealed class FLProjectWriter
 	}
 	private static void WriteMoreStuffIDK(EndianBinaryWriter w)
 	{
-		WriteWordEvent(w, FLEvent.CurArrangementNum, 0);
-		WriteByteEvent(w, FLEvent.APDC, 1);
-		WriteByteEvent(w, FLEvent.Unk_39, 1);
-		WriteByteEvent(w, FLEvent.ShouldCutNotesFast, 0);
-		WriteByteEvent(w, FLEvent.EEAutoMode, 0);
-		WriteByteEvent(w, FLEvent.Unk_38, 1);
+		Write16BitEvent(w, FLEvent.CurArrangementNum, 0);
+		Write8BitEvent(w, FLEvent.APDC, 1);
+		Write8BitEvent(w, FLEvent.Unk_39, 1);
+		Write8BitEvent(w, FLEvent.ShouldCutNotesFast, 0);
+		Write8BitEvent(w, FLEvent.EEAutoMode, 0);
+		Write8BitEvent(w, FLEvent.Unk_38, 1);
+	}
+
+	private static void WriteMixer(EndianBinaryWriter w)
+	{
+		WriteInsertMaster(w); // 0
+		WriteInsert1(w); // Different because of Fruity LSD
+		for (int i = 2; i <= 125; i++)
+		{
+			WriteInsert2Through125(w);
+		}
+		WriteInsertCurrent(w); // 126
+
+		FLMixerParams.Write(w);
+
+		Write32BitEvent(w, FLEvent.WindowH, 1286);
 	}
 	private static void WriteInsertMaster(EndianBinaryWriter w)
 	{
-		WriteBytesEventWithLength(w, FLEvent.FXParams, FXParams_InsertMasterAndCurrent);
+		WriteArrayEventWithLength(w, FLEvent.InsertParams, FXParams_InsertMasterAndCurrent);
 
-		WriteWordEvent(w, FLEvent.Unk_98, 0);
-		WriteWordEvent(w, FLEvent.Unk_98, 1);
-		WriteWordEvent(w, FLEvent.Unk_98, 2);
-		WriteWordEvent(w, FLEvent.Unk_98, 3);
-		WriteWordEvent(w, FLEvent.Unk_98, 4);
-		WriteWordEvent(w, FLEvent.Unk_98, 5);
-		WriteWordEvent(w, FLEvent.Unk_98, 6);
-		WriteWordEvent(w, FLEvent.Unk_98, 7);
-		WriteWordEvent(w, FLEvent.Unk_98, 8);
-		WriteWordEvent(w, FLEvent.Unk_98, 9);
-		w.WriteEnum(FLEvent.FXRouting); WriteTextEventLength(w, 127); w.WriteZeroes(127);
-		WriteDWordEvent(w, FLEvent.Unk_165, 3);
-		WriteDWordEvent(w, FLEvent.Unk_166, 1);
-		WriteDWordEvent(w, FLEvent.FXInChanNum, uint.MaxValue);
-		WriteDWordEvent(w, FLEvent.FXOutChanNum, 0);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 0);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 1);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 2);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 3);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 4);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 5);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 6);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 7);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 8);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 9);
+		// bool[127]. Go to nothing
+		w.WriteEnum(FLEvent.InsertRouting); WriteArrayEventLength(w, 127); w.WriteZeroes(127);
+		Write32BitEvent(w, FLEvent.Unk_165, 3);
+		Write32BitEvent(w, FLEvent.Unk_166, 1);
+		Write32BitEvent(w, FLEvent.InsertInChanNum, uint.MaxValue);
+		Write32BitEvent(w, FLEvent.InsertOutChanNum, 0);
 	}
 	private static void WriteInsert1(EndianBinaryWriter w)
 	{
-		WriteBytesEventWithLength(w, FLEvent.FXParams, FXParams_Insert1Through125);
+		WriteArrayEventWithLength(w, FLEvent.InsertParams, FXParams_Insert1Through125);
 
 		WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "Fruity LSD\0");
-		WriteBytesEventWithLength(w, FLEvent.NewPlugin, FruityLSD_NewPlugin);
-		WriteDWordEvent(w, FLEvent.PluginIcon, 0);
-		WriteDWordEvent(w, FLEvent.Color, 0x565148);
-		WriteBytesEventWithLength(w, FLEvent.PluginParams, FruityLSD_PluginParams);
+		WriteArrayEventWithLength(w, FLEvent.NewPlugin, FLNewPlugin.FruityLSD_NewPlugin);
+		Write32BitEvent(w, FLEvent.PluginIcon, 0);
+		Write32BitEvent(w, FLEvent.Color, 0x565148);
+		WriteArrayEventWithLength(w, FLEvent.PluginParams, FruityLSD_PluginParams);
 
-		WriteWordEvent(w, FLEvent.Unk_98, 0);
-		WriteWordEvent(w, FLEvent.Unk_98, 1);
-		WriteWordEvent(w, FLEvent.Unk_98, 2);
-		WriteWordEvent(w, FLEvent.Unk_98, 3);
-		WriteWordEvent(w, FLEvent.Unk_98, 4);
-		WriteWordEvent(w, FLEvent.Unk_98, 5);
-		WriteWordEvent(w, FLEvent.Unk_98, 6);
-		WriteWordEvent(w, FLEvent.Unk_98, 7);
-		WriteWordEvent(w, FLEvent.Unk_98, 8);
-		WriteWordEvent(w, FLEvent.Unk_98, 9);
-		w.WriteEnum(FLEvent.FXRouting); WriteTextEventLength(w, 127); w.WriteByte(1); w.WriteZeroes(126);
-		WriteDWordEvent(w, FLEvent.Unk_165, 3);
-		WriteDWordEvent(w, FLEvent.Unk_166, 1);
-		WriteDWordEvent(w, FLEvent.FXInChanNum, uint.MaxValue);
-		WriteDWordEvent(w, FLEvent.FXOutChanNum, uint.MaxValue);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 0);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 1);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 2);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 3);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 4);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 5);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 6);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 7);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 8);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 9);
+		// bool[127]. Go to master and nothing else
+		w.WriteEnum(FLEvent.InsertRouting); WriteArrayEventLength(w, 127); w.WriteByte(1); w.WriteZeroes(126);
+		Write32BitEvent(w, FLEvent.Unk_165, 3);
+		Write32BitEvent(w, FLEvent.Unk_166, 1);
+		Write32BitEvent(w, FLEvent.InsertInChanNum, uint.MaxValue);
+		Write32BitEvent(w, FLEvent.InsertOutChanNum, uint.MaxValue);
 	}
 	private static void WriteInsert2Through125(EndianBinaryWriter w)
 	{
-		WriteBytesEventWithLength(w, FLEvent.FXParams, FXParams_Insert1Through125);
+		WriteArrayEventWithLength(w, FLEvent.InsertParams, FXParams_Insert1Through125);
 
-		WriteWordEvent(w, FLEvent.Unk_98, 0);
-		WriteWordEvent(w, FLEvent.Unk_98, 1);
-		WriteWordEvent(w, FLEvent.Unk_98, 2);
-		WriteWordEvent(w, FLEvent.Unk_98, 3);
-		WriteWordEvent(w, FLEvent.Unk_98, 4);
-		WriteWordEvent(w, FLEvent.Unk_98, 5);
-		WriteWordEvent(w, FLEvent.Unk_98, 6);
-		WriteWordEvent(w, FLEvent.Unk_98, 7);
-		WriteWordEvent(w, FLEvent.Unk_98, 8);
-		WriteWordEvent(w, FLEvent.Unk_98, 9);
-		w.WriteEnum(FLEvent.FXRouting); WriteTextEventLength(w, 127); w.WriteByte(1); w.WriteZeroes(126);
-		WriteDWordEvent(w, FLEvent.Unk_165, 3);
-		WriteDWordEvent(w, FLEvent.Unk_166, 1);
-		WriteDWordEvent(w, FLEvent.FXInChanNum, uint.MaxValue);
-		WriteDWordEvent(w, FLEvent.FXOutChanNum, uint.MaxValue);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 0);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 1);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 2);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 3);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 4);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 5);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 6);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 7);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 8);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 9);
+		// bool[127]. Go to master and nothing else
+		w.WriteEnum(FLEvent.InsertRouting); WriteArrayEventLength(w, 127); w.WriteByte(1); w.WriteZeroes(126);
+		Write32BitEvent(w, FLEvent.Unk_165, 3);
+		Write32BitEvent(w, FLEvent.Unk_166, 1);
+		Write32BitEvent(w, FLEvent.InsertInChanNum, uint.MaxValue);
+		Write32BitEvent(w, FLEvent.InsertOutChanNum, uint.MaxValue);
 	}
 	private static void WriteInsertCurrent(EndianBinaryWriter w)
 	{
-		WriteBytesEventWithLength(w, FLEvent.FXParams, FXParams_InsertMasterAndCurrent);
+		WriteArrayEventWithLength(w, FLEvent.InsertParams, FXParams_InsertMasterAndCurrent);
 
-		WriteWordEvent(w, FLEvent.Unk_98, 0);
-		WriteWordEvent(w, FLEvent.Unk_98, 1);
-		WriteWordEvent(w, FLEvent.Unk_98, 2);
-		WriteWordEvent(w, FLEvent.Unk_98, 3);
-		WriteWordEvent(w, FLEvent.Unk_98, 4);
-		WriteWordEvent(w, FLEvent.Unk_98, 5);
-		WriteWordEvent(w, FLEvent.Unk_98, 6);
-		WriteWordEvent(w, FLEvent.Unk_98, 7);
-		WriteWordEvent(w, FLEvent.Unk_98, 8);
-		WriteWordEvent(w, FLEvent.Unk_98, 9);
-		w.WriteEnum(FLEvent.FXRouting); WriteTextEventLength(w, 127); w.WriteZeroes(127);
-		WriteDWordEvent(w, FLEvent.Unk_165, 3);
-		WriteDWordEvent(w, FLEvent.Unk_166, 1);
-		WriteDWordEvent(w, FLEvent.FXInChanNum, uint.MaxValue);
-		WriteDWordEvent(w, FLEvent.FXOutChanNum, uint.MaxValue);
-	}
-	private static void WriteEnding(EndianBinaryWriter w)
-	{
-		WriteBytesEventWithLength(w, FLEvent.InitCtrlRecChan, _initCtrlRecChan);
-		WriteDWordEvent(w, FLEvent.WindowH, 1286);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 0);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 1);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 2);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 3);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 4);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 5);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 6);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 7);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 8);
+		Write16BitEvent(w, FLEvent.NewInsertSlot, 9);
+		// bool[127]. Go to nothing
+		w.WriteEnum(FLEvent.InsertRouting); WriteArrayEventLength(w, 127); w.WriteZeroes(127);
+		Write32BitEvent(w, FLEvent.Unk_165, 3);
+		Write32BitEvent(w, FLEvent.Unk_166, 1);
+		Write32BitEvent(w, FLEvent.InsertInChanNum, uint.MaxValue);
+		Write32BitEvent(w, FLEvent.InsertOutChanNum, uint.MaxValue);
 	}
 }
