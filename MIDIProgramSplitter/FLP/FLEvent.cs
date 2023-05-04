@@ -169,7 +169,7 @@ internal enum FLEvent : byte
 	/// <summary>Selection in playlist</summary>
 	PlaylistSelection,
 	ChannelEnvelope,
-	BasicChanParams,
+	BasicChannelParams,
 	OldFilterParams,
 	ChanPoly,
 	NoteEvents,

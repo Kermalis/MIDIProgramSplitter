@@ -4,7 +4,7 @@ using System.Text;
 
 namespace MIDIProgramSplitter.FLP;
 
-internal sealed class FLMixerParams
+internal static class FLMixerParams
 {
 	private const int BYTES_PER_EVENT = 0xC;
 	// There are 4697 events:
