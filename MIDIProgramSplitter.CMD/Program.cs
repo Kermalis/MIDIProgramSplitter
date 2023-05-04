@@ -1,7 +1,6 @@
-﻿using Kermalis.MIDI;
-using MIDIProgramSplitter.FLP;
+﻿using FLP;
+using Kermalis.MIDI;
 using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace MIDIProgramSplitter.CMD;
@@ -10,9 +9,7 @@ internal static class Program
 {
 	private static void Main(string[] args)
 	{
-		//Test_ReadFLP();
-		//Test_WriteFLP();
-		//return;
+		//Test_ReadFLP(); return;
 
 #if DEBUG
 		args = new string[]
@@ -82,61 +79,6 @@ internal static class Program
 			WinUtils.Win_SetClipboardString(flp.Log.ToString());
 #endif
 			;
-		}
-	}
-	private static void Test_WriteFLP()
-	{
-		const string OUT = @"C:\Users\Kermalis\Documents\Development\GitHub\MIDIProgramSplitter\TestOUT.flp";
-
-		using (FileStream s = File.Create(OUT))
-		{
-			var w = new FLProjectWriter();
-
-			w.Channels.Add(new FLChannel("Test Chan 0!", 0, 0));
-			w.Channels.Add(new FLChannel("CHAN ONE", 1, MIDIProgram.FrenchHorn));
-
-			w.Automations.Add(new FLAutomation("Test auto", FLAutomation.MyType.Volume, new List<FLChannel> { w.Channels[1] })
-			{
-				Points =
-				{
-					new FLAutomation.Point
-					{
-						Value = 0.5
-					},
-					new FLAutomation.Point
-					{
-						AbsoluteTicks = 96,
-						Value = 1
-					},
-				}
-			});
-
-			w.Patterns.Add(new FLPattern
-			{
-				Notes = // Must be in order of AbsoluteTick
-				{
-					new FLPatternNote
-					{
-						AbsoluteTick = 0,
-						Channel = 1,
-						DurationTicks = 48,
-						Key = 60,
-						Velocity = 0x80,
-					},
-					new FLPatternNote
-					{
-						AbsoluteTick = 48,
-						Channel = 0,
-						DurationTicks = 48,
-						Key = 62,
-						Velocity = 0x64,
-					},
-				}
-			});
-
-			w.AddToPlaylist(w.Patterns[0], 0, 96 * 4, w.PlaylistTracks[0]);
-
-			w.Write(s);
 		}
 	}
 }

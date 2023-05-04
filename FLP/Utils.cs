@@ -1,6 +1,6 @@
 ﻿namespace FLP;
 
-public static partial class Utils
+internal static partial class Utils
 {
 	/// <summary>Maps a value in the range [a1, a2] to [b1, b2]. Divide by zero occurs if a1 and a2 are equal</summary>
 	public static float LerpUnclamped(float a1, float a2, float b1, float b2, float value)

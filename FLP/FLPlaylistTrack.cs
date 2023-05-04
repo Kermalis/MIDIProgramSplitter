@@ -1,9 +1,12 @@
 ﻿using Kermalis.EndianBinaryIO;
 
-namespace MIDIProgramSplitter.FLP;
+namespace FLP;
 
 public sealed class FLPlaylistTrack
 {
+	internal ushort Index;
+	internal ushort ID => (ushort)(Index + 1);
+
 	public float Size;
 	public bool GroupWithAbove;
 	/// <summary>Only works if this track is the parent of the group</summary>
@@ -18,12 +21,12 @@ public sealed class FLPlaylistTrack
 		Size = 1f;
 	}
 
-	internal void Write(EndianBinaryWriter w, uint index)
+	internal void Write(EndianBinaryWriter w)
 	{
 		w.WriteEnum(FLEvent.NewPlaylistTrack);
 		FLProjectWriter.WriteArrayEventLength(w, 66);
 
-		w.WriteUInt32(index + 1);
+		w.WriteUInt32(ID);
 
 		w.WriteByte(Color.R);
 		w.WriteByte(Color.G);
@@ -40,7 +43,7 @@ public sealed class FLPlaylistTrack
 		// If I "Lock to this size", this becomes 0x38 (56) instead of -16 or -1
 		// If I manually resize it, this becomes -56 and Size (above) changes
 		// Even if I reset the size to 100%, this stays -56 instead of going back to the weird value
-		w.WriteInt32(index <= 0x20 ? -16 : -1); // TODO: Why? 
+		w.WriteInt32(Index <= 0x20 ? -16 : -1); // TODO: Why? 
 
 		w.WriteByte(0);
 		w.WriteByte(0); // Performance Motion

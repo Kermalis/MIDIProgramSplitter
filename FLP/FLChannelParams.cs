@@ -1,12 +1,12 @@
 ﻿using Kermalis.EndianBinaryIO;
 
-namespace MIDIProgramSplitter.FLP;
+namespace FLP;
 
 internal struct FLChannelParams
 {
-	public static void WriteMIDIOut(EndianBinaryWriter w, ushort chanID)
+	public static void WriteMIDIOut(EndianBinaryWriter w, ushort chanIndex)
 	{
-		Write(w, 1, (byte)chanID);
+		Write(w, 1, (byte)chanIndex);
 	}
 	public static void WriteAutomation(EndianBinaryWriter w)
 	{

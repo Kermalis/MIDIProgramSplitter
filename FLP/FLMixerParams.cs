@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text;
 
-namespace MIDIProgramSplitter.FLP;
+namespace FLP;
 
 internal static class FLMixerParams
 {

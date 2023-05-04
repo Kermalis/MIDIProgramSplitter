@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MIDIProgramSplitter.FLP;
+namespace FLP;
 
 internal enum FLChannelType : byte
 {

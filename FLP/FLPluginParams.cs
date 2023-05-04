@@ -2,7 +2,7 @@
 using Kermalis.MIDI;
 using System;
 
-namespace MIDIProgramSplitter.FLP;
+namespace FLP;
 
 internal struct FLPluginParams
 {

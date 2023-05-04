@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace MIDIProgramSplitter.FLP;
+namespace FLP;
 
 public sealed partial class FLAutomation
 {
@@ -23,23 +23,29 @@ public sealed partial class FLAutomation
 	private static ReadOnlySpan<byte> ChanPoly => new byte[9]
 	{
 		0x01, 0x00, 0x00, 0x00,
-		0xF4, 0x01, // 500
+		0xF4, 0x01, // 500. TODO: Is this related to the number of playlist tracks?
 		0x00, 0x00,
 		0x00
 	};
 
-	public readonly string Name;
+	internal ushort Index;
+
+	public string Name;
+	public FLColor3 Color;
 	public readonly MyType Type;
 	/// <summary>Only null for Tempo</summary>
 	public readonly List<FLChannel>? Targets;
 	public readonly List<Point> Points;
+	public FLChannelFilter Filter;
 
-	public FLAutomation(string name, MyType type, List<FLChannel>? targets)
+	internal FLAutomation(string name, MyType type, List<FLChannel>? targets, FLChannelFilter filter)
 	{
 		Name = name;
+		Color = new FLColor3(0x60608E); // R 142, G 96, B 96
 		Type = type;
 		Targets = targets;
 		Points = new List<Point>();
+		Filter = filter;
 	}
 
 	public void AddPoint(uint ticks, double value)
@@ -87,15 +93,16 @@ public sealed partial class FLAutomation
 		PadPoints(targetTicks, Utils.LerpUnclamped(10, 522, 0, 1, defaultTempo));
 	}
 
-	internal void Write(EndianBinaryWriter w, ushort id, uint filterNum, uint ppqn)
+	internal void Write(EndianBinaryWriter w, uint ppqn)
 	{
-		FLProjectWriter.Write16BitEvent(w, FLEvent.NewChannel, id);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.NewChannel, Index);
 		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelType, (byte)FLChannelType.Automation);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "\0");
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.NewPlugin, FLNewPlugin.Automation_NewPlugin_DeselectedTopLeft);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PluginName, Name + '\0');
 		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginIcon, 0);
-		FLProjectWriter.Write32BitEvent(w, FLEvent.Color, 0x60608E);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginColor, Color.GetFLValue());
+		// No plugin params
 		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelIsEnabled, 1);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.Delay, FLChannel.Delay);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.DelayReso, 0x800_080);
@@ -119,7 +126,7 @@ public sealed partial class FLAutomation
 		FLChannelParams.WriteAutomation(w);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.CutCutBy, 0);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.ChannelLayerFlags, 0);
-		FLProjectWriter.Write32BitEvent(w, FLEvent.ChanFilterNum, filterNum);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.ChanFilterNum, Filter.Index);
 		WriteAutomationData(w, ppqn);
 		FLProjectWriter.Write8BitEvent(w, FLEvent.Unk_32, 0);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelTracking, FLChannel.Tracking0);
@@ -180,30 +187,30 @@ public sealed partial class FLAutomation
 		w.WriteUInt32(0);
 		w.WriteUInt32(0);
 	}
-	internal void WriteAutomationConnection(EndianBinaryWriter w, ushort automationChannelID, List<FLChannel> channels)
+	internal void WriteAutomationConnection(EndianBinaryWriter w)
 	{
 		if (Type == MyType.Tempo)
 		{
-			WriteAutomationConnection(w, automationChannelID, 0x4000);
+			WriteAutomationConnection(w, 0x4000);
 		}
 		else
 		{
 			foreach (FLChannel target in Targets!)
 			{
-				WriteAutomationConnection(w, automationChannelID, (ushort)channels.IndexOf(target));
+				WriteAutomationConnection(w, target.Index);
 			}
 		}
 	}
-	private void WriteAutomationConnection(EndianBinaryWriter w, ushort automationChannelID, ushort targetID)
+	private void WriteAutomationConnection(EndianBinaryWriter w, ushort target)
 	{
 		w.WriteEnum(FLEvent.AutomationConnection);
 		FLProjectWriter.WriteArrayEventLength(w, 20);
 
 		w.WriteUInt16(0);
-		w.WriteUInt16(automationChannelID);
+		w.WriteUInt16(Index);
 		w.WriteUInt32(0);
 		w.WriteUInt16(MyTypeToConnectionType(Type));
-		w.WriteUInt16(targetID);
+		w.WriteUInt16(target);
 		w.WriteUInt32(8);
 		w.WriteUInt32(0x1D5);
 	}
@@ -236,22 +243,17 @@ public sealed partial class FLAutomation
 
 	internal static string ReadData(byte[] data)
 	{
-		using (var ms = new MemoryStream(data))
+		using (MemoryStream ms = new(data))
 		{
 			var r = new EndianBinaryReader(ms);
-			var str = new StringBuilder();
+			StringBuilder str = new();
 
-			void WriteLoc(int numBytes)
-			{
-				long i = ms.Position;
-				str.AppendLine(string.Format(" // {0:D3}-{1:D3}", i, i + numBytes - 1));
-			}
-			void WriteLocE(int numBytes, string extra)
+			void WriteLoc(int numBytes, string extra)
 			{
 				long i = ms.Position;
 				str.AppendLine(string.Format(" // {0:D3}-{1:D3}: {2}", i, i + numBytes - 1, extra));
 			}
-			void WriteLocE1(string extra)
+			void WriteLoc1(string extra)
 			{
 				long i = ms.Position;
 				str.AppendLine(string.Format(" // {0:D3}: {1}", i, extra));
@@ -259,7 +261,7 @@ public sealed partial class FLAutomation
 
 			str.AppendLine("{");
 
-			WriteLocE(4, "Always 1?");
+			WriteLoc(4, "Always 1?");
 			uint v0 = r.ReadUInt32();
 			str.AppendLine($" {v0},");
 			if (v0 != 1)
@@ -267,7 +269,7 @@ public sealed partial class FLAutomation
 				;
 			}
 
-			WriteLocE(4, "Always 0x40 (64)?");
+			WriteLoc(4, "Always 0x40 (64)?");
 			uint v4 = r.ReadUInt32();
 			str.AppendLine($" 0x{v4:X},");
 			if (v4 != 0x40)
@@ -276,7 +278,7 @@ public sealed partial class FLAutomation
 			}
 
 			str.AppendLine();
-			WriteLocE1("0 for vol/gminstrument/tempo, 1 for pan/pitch");
+			WriteLoc1("0 for vol/gminstrument/tempo, 1 for pan/pitch");
 			byte type = r.ReadByte();
 			str.AppendLine($" 0x{type:X2},");
 			if (type is not 0 and not 1)
@@ -285,14 +287,14 @@ public sealed partial class FLAutomation
 			}
 
 			str.AppendLine();
-			WriteLocE(4, "Always 4?");
+			WriteLoc(4, "Always 4?");
 			uint v9 = r.ReadUInt32();
 			str.AppendLine($" {v9},");
 			if (v9 != 4)
 			{
 				;
 			}
-			WriteLocE(4, "Always 3?");
+			WriteLoc(4, "Always 3?");
 			uint v13 = r.ReadUInt32();
 			str.AppendLine($" {v13},");
 			if (v13 != 3)
@@ -301,19 +303,19 @@ public sealed partial class FLAutomation
 			}
 
 			str.AppendLine();
-			WriteLocE(4, "Num points");
+			WriteLoc(4, "Num points");
 			uint nPoints = r.ReadUInt32();
 			str.AppendLine($" {nPoints},");
 
 			str.AppendLine();
-			WriteLocE(4, "Always 0?");
+			WriteLoc(4, "Always 0?");
 			uint v21 = r.ReadUInt32();
 			str.AppendLine($" {v21},");
 			if (v21 != 0)
 			{
 				;
 			}
-			WriteLocE(4, "Always 0?");
+			WriteLoc(4, "Always 0?");
 			uint v25 = r.ReadUInt32();
 			str.AppendLine($" {v25},");
 			if (v25 != 0)
@@ -332,21 +334,21 @@ public sealed partial class FLAutomation
 				str.AppendLine();
 				str.AppendLine(" // POINT " + (p + 1) + '/' + numPoints + ':');
 
-				WriteLocE(8, "Amplitude");
+				WriteLoc(8, "Amplitude");
 				str.AppendLine($" {r.ReadDouble()}d,");
 
 				// Tension and curve type are in buggy states when you convert events to an automation clip. Not recreating that behavior
-				WriteLocE(4, "Tension from previous point (-1 to 1)");
+				WriteLoc(4, "Tension from previous point (-1 to 1)");
 				float tension = r.ReadSingle();
 				uint fAsU = BitConverter.SingleToUInt32Bits(tension);
 				str.AppendLine($" {tension}f, // 0x{fAsU:X8}");
 
-				WriteLocE(4, "Curve type: 0x00000000 for first point? 0x01000000 for single curve edited? 0x02000000 for single curve? 0x00000002 for hold.");
+				WriteLoc(4, "Curve type: 0x00000000 for first point? 0x01000000 for single curve edited? 0x02000000 for single curve? 0x00000002 for hold.");
 				str.AppendLine($" 0x{r.ReadUInt32():X8},");
 
 				// For the last point, its hex value is 0xFFFFFFFF00000001, which is not a normal NaN.
 				// Normal NaN is 0x7FF8000000000000
-				WriteLocE(8, "Next point deltatime (in quarters of a bar)");
+				WriteLoc(8, "Next point deltatime (in quarters of a bar)");
 				double nextPointDelta = r.ReadDouble();
 				ulong dAsUL = BitConverter.DoubleToUInt64Bits(nextPointDelta);
 				str.AppendLine($" {nextPointDelta}d, // 0x{dAsUL:X16}");
@@ -354,175 +356,175 @@ public sealed partial class FLAutomation
 
 			str.AppendLine();
 			str.AppendLine(" // Same for all:");
-			WriteLocE(4, "Always -1?");
+			WriteLoc(4, "Always -1?");
 			uint v77 = r.ReadUInt32();
 			str.AppendLine($" 0x{v77:X8},");
 			if (v77 != uint.MaxValue)
 			{
 				;
 			}
-			WriteLocE(4, "Always -1?");
+			WriteLoc(4, "Always -1?");
 			uint v81 = r.ReadUInt32();
 			str.AppendLine($" 0x{v81:X8},");
 			if (v81 != uint.MaxValue)
 			{
 				;
 			}
-			WriteLocE(4, "Always -1?");
+			WriteLoc(4, "Always -1?");
 			uint v85 = r.ReadUInt32();
 			str.AppendLine($" 0x{v85:X8},");
 			if (v85 != uint.MaxValue)
 			{
 				;
 			}
-			WriteLocE(4, "Always 0x80 (128)?");
+			WriteLoc(4, "Always 0x80 (128)?");
 			uint v89 = r.ReadUInt32();
 			str.AppendLine($" 0x{v89:X8},");
 			if (v89 != 0x80)
 			{
 				;
 			}
-			WriteLocE(4, "Always 0x80 (128)?");
+			WriteLoc(4, "Always 0x80 (128)?");
 			uint v93 = r.ReadUInt32();
 			str.AppendLine($" 0x{v93:X8},");
 			if (v93 != 0x80)
 			{
 				;
 			}
-			WriteLocE(4, "Always 0?");
+			WriteLoc(4, "Always 0?");
 			uint v97 = r.ReadUInt32();
 			str.AppendLine($" 0x{v97:X8},");
 			if (v97 != 0)
 			{
 				;
 			}
-			WriteLocE(4, "Always 0x80 (128)?");
+			WriteLoc(4, "Always 0x80 (128)?");
 			uint v101 = r.ReadUInt32();
 			str.AppendLine($" 0x{v101:X8},");
 			if (v101 != 0x80)
 			{
 				;
 			}
-			WriteLocE(4, "Always 5?");
+			WriteLoc(4, "Always 5?");
 			uint v105 = r.ReadUInt32();
 			str.AppendLine($" 0x{v105:X8},");
 			if (v105 != 5)
 			{
 				;
 			}
-			WriteLocE(4, "Always 3?");
+			WriteLoc(4, "Always 3?");
 			uint v109 = r.ReadUInt32();
 			str.AppendLine($" 0x{v109:X8},");
 			if (v109 != 3)
 			{
 				;
 			}
-			WriteLocE(4, "Always 1?");
+			WriteLoc(4, "Always 1?");
 			uint v113 = r.ReadUInt32();
 			str.AppendLine($" 0x{v113:X8},");
 			if (v113 != 1)
 			{
 				;
 			}
-			WriteLocE(4, "Always 0?");
+			WriteLoc(4, "Always 0?");
 			uint v117 = r.ReadUInt32();
 			str.AppendLine($" 0x{v117:X8},");
 			if (v117 != 0)
 			{
 				;
 			}
-			WriteLocE(4, "Always 0?");
+			WriteLoc(4, "Always 0?");
 			uint v121 = r.ReadUInt32();
 			str.AppendLine($" 0x{v121:X8},");
 			if (v121 != 0)
 			{
 				;
 			}
-			WriteLocE(8, "Always 1?");
+			WriteLoc(8, "Always 1?");
 			double v125 = r.ReadDouble();
 			str.AppendLine($" {v125}d,");
 			if (v125 != 1)
 			{
 				;
 			}
-			WriteLocE(4, "Always 0?");
+			WriteLoc(4, "Always 0?");
 			uint v133 = r.ReadUInt32();
 			str.AppendLine($" 0x{v133:X8},");
 			if (v133 != 0)
 			{
 				;
 			}
-			WriteLocE(4, "Always 0?");
+			WriteLoc(4, "Always 0?");
 			uint v137 = r.ReadUInt32();
 			str.AppendLine($" 0x{v137:X8},");
 			if (v137 != 0)
 			{
 				;
 			}
-			WriteLocE(4, "Always 1?");
+			WriteLoc(4, "Always 1?");
 			uint v141 = r.ReadUInt32();
 			str.AppendLine($" 0x{v141:X8},");
 			if (v141 != 1)
 			{
 				;
 			}
-			WriteLocE(4, "Always 0?");
+			WriteLoc(4, "Always 0?");
 			uint v145 = r.ReadUInt32();
 			str.AppendLine($" 0x{v145:X8},");
 			if (v145 != 0)
 			{
 				;
 			}
-			WriteLocE(4, "Always -1?");
+			WriteLoc(4, "Always -1?");
 			uint v149 = r.ReadUInt32();
 			str.AppendLine($" 0x{v149:X8},");
 			if (v149 != uint.MaxValue)
 			{
 				;
 			}
-			WriteLocE(4, "Always -1?");
+			WriteLoc(4, "Always -1?");
 			uint v151 = r.ReadUInt32();
 			str.AppendLine($" 0x{v151:X8},");
 			if (v151 != uint.MaxValue)
 			{
 				;
 			}
-			WriteLocE(4, "Always -1?");
+			WriteLoc(4, "Always -1?");
 			uint v155 = r.ReadUInt32();
 			str.AppendLine($" 0x{v155:X8},");
 			if (v155 != uint.MaxValue)
 			{
 				;
 			}
-			WriteLocE(4, "Always 0xB2FB (45_819)?");
+			WriteLoc(4, "Always 0xB2FB (45_819)?");
 			uint v157 = r.ReadUInt32();
 			str.AppendLine($" 0x{v157:X8},");
 			if (v157 != 0xB2FB)
 			{
 				;
 			}
-			WriteLocE(4, "Always 0?");
+			WriteLoc(4, "Always 0?");
 			uint v161 = r.ReadUInt32();
 			str.AppendLine($" 0x{v161:X8},");
 			if (v161 != 0)
 			{
 				;
 			}
-			WriteLocE(4, "Always 0?");
+			WriteLoc(4, "Always 0?");
 			uint v165 = r.ReadUInt32();
 			str.AppendLine($" 0x{v165:X8},");
 			if (v165 != 0)
 			{
 				;
 			}
-			WriteLocE(4, "Always 0?");
+			WriteLoc(4, "Always 0?");
 			uint v169 = r.ReadUInt32();
 			str.AppendLine($" 0x{v169:X8},");
 			if (v169 != 0)
 			{
 				;
 			}
-			WriteLocE(4, "Always 0?");
+			WriteLoc(4, "Always 0?");
 			uint v173 = r.ReadUInt32();
 			str.AppendLine($" 0x{v173:X8}");
 			if (v173 != 0)

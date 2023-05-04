@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MIDIProgramSplitter.FLP;
+namespace FLP;
 
 public struct FLColor3
 {

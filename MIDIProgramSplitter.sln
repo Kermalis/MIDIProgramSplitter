@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MIDIProgramSplitter.CMD", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MIDIProgramSplitter.GUI", "MIDIProgramSplitter.GUI\MIDIProgramSplitter.GUI.csproj", "{756C2E7D-3912-44CE-9BDA-0A474927FF54}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FLP", "FLP\FLP.csproj", "{4745F7C7-78D8-42B1-9BFC-03945B6D8551}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{756C2E7D-3912-44CE-9BDA-0A474927FF54}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{756C2E7D-3912-44CE-9BDA-0A474927FF54}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{756C2E7D-3912-44CE-9BDA-0A474927FF54}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4745F7C7-78D8-42B1-9BFC-03945B6D8551}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4745F7C7-78D8-42B1-9BFC-03945B6D8551}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4745F7C7-78D8-42B1-9BFC-03945B6D8551}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4745F7C7-78D8-42B1-9BFC-03945B6D8551}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

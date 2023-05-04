@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace MIDIProgramSplitter.FLP;
+namespace FLP;
 
 public sealed class FLProjectReader
 {
@@ -78,11 +78,11 @@ public sealed class FLProjectReader
 			{
 				HandleEvent_8Bit(ev, data);
 			}
-			else if (ev is >= FLEvent.NewChannel and < FLEvent.Color)
+			else if (ev is >= FLEvent.NewChannel and < FLEvent.PluginColor)
 			{
 				HandleEvent_16Bit(ev, data);
 			}
-			else if (ev is >= FLEvent.Color and < FLEvent.ChannelName)
+			else if (ev is >= FLEvent.PluginColor and < FLEvent.ChannelName)
 			{
 				HandleEvent_32Bit(ev, data);
 			}
@@ -102,7 +102,7 @@ public sealed class FLProjectReader
 		{
 			data |= (uint)r.ReadByte() << 8;
 		}
-		if (ev is >= FLEvent.Color and < FLEvent.ChannelName)
+		if (ev is >= FLEvent.PluginColor and < FLEvent.ChannelName)
 		{
 			data |= (uint)r.ReadByte() << 16;
 			data |= (uint)r.ReadByte() << 24;
@@ -165,7 +165,7 @@ public sealed class FLProjectReader
 	{
 		switch (ev)
 		{
-			case FLEvent.Color:
+			case FLEvent.PluginColor:
 			case FLEvent.PatternColor:
 			case FLEvent.InsertColor:
 			{
@@ -210,6 +210,11 @@ public sealed class FLProjectReader
 		{
 			type = "Bytes";
 			str = FLMixerParams.ReadData(bytes);
+		}
+		else if (ev == FLEvent.ProjectTime)
+		{
+			type = "Bytes";
+			str = FLProjectTime.ReadData(bytes);
 		}
 		else
 		{

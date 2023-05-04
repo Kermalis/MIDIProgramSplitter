@@ -1,6 +1,6 @@
 ﻿using Kermalis.EndianBinaryIO;
 
-namespace MIDIProgramSplitter.FLP;
+namespace FLP;
 
 partial class FLAutomation
 {

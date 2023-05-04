@@ -1,5 +1,5 @@
-﻿using Kermalis.MIDI;
-using MIDIProgramSplitter.FLP;
+﻿using FLP;
+using Kermalis.MIDI;
 using System.IO;
 
 namespace MIDIProgramSplitter;
@@ -15,21 +15,25 @@ partial class Splitter
 				PPQN = _inMIDI.HeaderChunk.TimeDivision.PPQN_TicksPerQuarterNote,
 			};
 
-			FLP_AddMetaTrackEvents(w, out decimal tempo, out byte timeSigNum, out byte timeSigDenom);
+			FLChannelFilter? autoFilter = null;
+			int automationTrackIndex = _inMIDI.HeaderChunk.NumTracks;
+
+			FLP_AddMetaTrackEvents(w, ref autoFilter, ref automationTrackIndex, out decimal tempo, out byte timeSigNum, out byte timeSigDenom);
 			w.CurrentTempo = tempo;
 			w.TimeSigNumerator = timeSigNum;
 			w.TimeSigDenominator = timeSigDenom;
 
 			foreach (TrackData t in _splitTracks)
 			{
-				t.FLP_AddNewTracks(w, _maxTicks);
+				t.FLP_AddNewTracks(w, _maxTicks, ref automationTrackIndex);
 			}
 
 			w.Write(s);
 		}
 	}
 
-	private void FLP_AddMetaTrackEvents(FLProjectWriter w, out decimal tempo, out byte timeSigNum, out byte timeSigDenom)
+	private void FLP_AddMetaTrackEvents(FLProjectWriter w, ref FLChannelFilter? autoFilter, ref int automationTrackIndex,
+		out decimal tempo, out byte timeSigNum, out byte timeSigDenom)
 	{
 		const int DEFAULT_MIDI_TEMPO = 120;
 
@@ -48,7 +52,7 @@ partial class Splitter
 			{
 				case MetaMessageType.Tempo:
 				{
-					FLP_HandleTempo(e, m, w, ref tempo, ref firstTempo, ref tempoAuto);
+					FLP_HandleTempo(e, m, w, ref autoFilter, ref automationTrackIndex, ref tempo, ref firstTempo, ref tempoAuto);
 					break;
 				}
 				case MetaMessageType.TimeSignature:
@@ -62,7 +66,7 @@ partial class Splitter
 		tempoAuto?.PadTempoPoints(_maxTicks, DEFAULT_MIDI_TEMPO);
 	}
 	private void FLP_HandleTempo(MIDIEvent e, MetaMessage m, FLProjectWriter w,
-		ref decimal tempo, ref MIDIEvent? firstTempo, ref FLAutomation? tempoAuto)
+		ref FLChannelFilter? autoFilter, ref int automationTrackIndex, ref decimal tempo, ref MIDIEvent? firstTempo, ref FLAutomation? tempoAuto)
 	{
 		m.ReadTempoMessage(out _, out decimal bpm);
 		if (firstTempo is null)
@@ -75,9 +79,13 @@ partial class Splitter
 		// This is the 2nd or after change. 2nd will create the autoclip
 		if (tempoAuto is null)
 		{
-			tempoAuto = new FLAutomation("Tempo", FLAutomation.MyType.Tempo, null);
-			w.Automations.Add(tempoAuto);
-			w.AddToPlaylist(tempoAuto, 0, _maxTicks, w.PlaylistTracks[200]); // TODO: Choose intelligently
+			autoFilter ??= w.CreateAutomationFilter();
+			tempoAuto = w.CreateTempoAutomation("Tempo", autoFilter);
+
+			FLArrangement arrang = w.Arrangements[0];
+			FLPlaylistTrack track = arrang.PlaylistTracks[automationTrackIndex++];
+			track.Size = 1f / 3;
+			arrang.AddToPlaylist(tempoAuto, 0, _maxTicks, track);
 
 			tempoAuto.AddTempoPoint((uint)firstTempo.Ticks, tempo);
 		}
@@ -95,12 +103,14 @@ partial class Splitter
 			return;
 		}
 
+		FLArrangement arrang = w.Arrangements[0];
+
 		// This is the 2nd or after change. 2nd will create the marker for #1 and #2
 		if (!createdFirstTimeSigMarker)
 		{
 			createdFirstTimeSigMarker = true;
-			w.AddTimeSigMarker((uint)firstTimeSig.Ticks, timeSigNum, timeSigDenom);
+			arrang.AddTimeSigMarker((uint)firstTimeSig.Ticks, timeSigNum, timeSigDenom);
 		}
-		w.AddTimeSigMarker((uint)e.Ticks, num, denom);
+		arrang.AddTimeSigMarker((uint)e.Ticks, num, denom);
 	}
 }

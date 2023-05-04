@@ -2,7 +2,7 @@
 using Kermalis.MIDI;
 using System;
 
-namespace MIDIProgramSplitter.FLP;
+namespace FLP;
 
 public sealed class FLChannel
 {
@@ -79,26 +79,32 @@ public sealed class FLChannel
 		0x9B, 0xFF, 0xFF, 0xFF // -101
 	};
 
-	public readonly string Name;
-	public readonly byte MIDIChannel;
-	public readonly MIDIProgram MIDIProgram;
+	internal ushort Index;
 
-	public FLChannel(string name, byte midiChan, MIDIProgram midiProgram)
+	public string Name;
+	public FLColor3 Color;
+	public byte MIDIChannel;
+	public MIDIProgram MIDIProgram;
+	public FLChannelFilter Filter;
+
+	internal FLChannel(string name, byte midiChan, MIDIProgram midiProgram, FLChannelFilter filter)
 	{
 		Name = name;
+		Color = new FLColor3(0x73725E); // R 94, G 114, B 115
 		MIDIChannel = midiChan;
 		MIDIProgram = midiProgram;
+		Filter = filter;
 	}
 
-	internal void Write(EndianBinaryWriter w, ushort chanID, uint filterNum)
+	internal void Write(EndianBinaryWriter w)
 	{
-		FLProjectWriter.Write16BitEvent(w, FLEvent.NewChannel, chanID);
+		FLProjectWriter.Write16BitEvent(w, FLEvent.NewChannel, Index);
 		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelType, (byte)FLChannelType.FLPlugin);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "MIDI Out\0");
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.NewPlugin, FLNewPlugin.MIDIOut_NewPlugin_DeselectedTopLeft);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PluginName, Name + '\0');
 		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginIcon, 0);
-		FLProjectWriter.Write32BitEvent(w, FLEvent.Color, 0x73725E);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginColor, Color.GetFLValue());
 		FLPluginParams.WriteMIDIOut(w, MIDIChannel, MIDIProgram);
 		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelIsEnabled, 1);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.Delay, Delay);
@@ -120,10 +126,11 @@ public sealed class FLChannel
 		FLBasicChannelParams.WriteChannel(w);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChanOfsLevels, ChanOfsLevels);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChanPoly, ChanPoly);
-		FLChannelParams.WriteMIDIOut(w, chanID);
-		FLProjectWriter.Write32BitEvent(w, FLEvent.CutCutBy, (uint)(chanID + 1) * 0x10_001u);
+		FLChannelParams.WriteMIDIOut(w, Index);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.CutCutBy, (uint)(Index + 1) * 0x10_001u);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.ChannelLayerFlags, 0);
-		FLProjectWriter.Write32BitEvent(w, FLEvent.ChanFilterNum, filterNum);
+		FLProjectWriter.Write32BitEvent(w, FLEvent.ChanFilterNum, Filter.Index);
+		//
 		FLProjectWriter.Write8BitEvent(w, FLEvent.Unk_32, 0);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelTracking, Tracking0);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChannelTracking, Tracking1);

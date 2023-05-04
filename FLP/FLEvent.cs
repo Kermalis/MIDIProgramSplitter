@@ -1,4 +1,4 @@
-﻿namespace MIDIProgramSplitter.FLP;
+﻿namespace FLP;
 
 internal enum FLEvent : byte
 {
@@ -92,7 +92,7 @@ internal enum FLEvent : byte
 	CurArrangementNum,
 
 	// 32bit
-	Color = 0x80,
+	PluginColor = 0x80,
 	PlaylistItem,
 	Echo,
 	FXSine,

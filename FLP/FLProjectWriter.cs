@@ -1,16 +1,14 @@
 ﻿using Kermalis.EndianBinaryIO;
+using Kermalis.MIDI;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace MIDIProgramSplitter.FLP;
+namespace FLP;
 
 public sealed class FLProjectWriter
 {
-	/// <summary>The project was started on 26/4/23 17:20. Total time spent on it: 4 minutes? This is probably the wrong file</summary>
-	private static ReadOnlySpan<byte> ProjectTime_Default => new byte[16] { 0xC5, 0x8D, 0x96, 0x1D, 0x57, 0xFE, 0xE5, 0x40, 0x00, 0x00, 0x00, 0x50, 0xAA, 0x93, 0x25, 0x3F };
-
 	private static ReadOnlySpan<byte> MIDIInfo0 => new byte[20]
 	{
 		0x01, 0x00, 0x00, 0x00,
@@ -45,16 +43,17 @@ public sealed class FLProjectWriter
 		0xFF, 0xFF
 	};
 
+	public readonly List<FLChannelFilter> ChannelFilters;
 	public readonly List<FLChannel> Channels;
 	public readonly List<FLAutomation> Automations;
 	public readonly List<FLPattern> Patterns;
-	public readonly List<FLPlaylistItem> PlaylistItems;
-	public readonly List<FLPlaylistMarker> PlaylistMarkers;
-	public readonly List<FLPlaylistTrack> PlaylistTracks;
+	public readonly List<FLArrangement> Arrangements;
 	public ushort PPQN;
 	public decimal CurrentTempo;
 	public byte TimeSigNumerator;
 	public byte TimeSigDenominator;
+	public FLChannelFilter? SelectedChannelFilter;
+	public FLArrangement? SelectedArrangement;
 
 	public FLProjectWriter()
 	{
@@ -64,38 +63,97 @@ public sealed class FLProjectWriter
 		TimeSigNumerator = 4;
 		TimeSigDenominator = 4;
 
+		ChannelFilters = new List<FLChannelFilter>();
 		Channels = new List<FLChannel>();
 		Automations = new List<FLAutomation>();
 		Patterns = new List<FLPattern>();
-		PlaylistItems = new List<FLPlaylistItem>();
-		PlaylistMarkers = new List<FLPlaylistMarker>();
-
-		PlaylistTracks = new List<FLPlaylistTrack>(500);
-		for (int i = 0; i < PlaylistTracks.Capacity; i++)
+		Arrangements = new List<FLArrangement>(1)
 		{
-			PlaylistTracks.Add(new FLPlaylistTrack());
-		}
+			new FLArrangement("Arrangement"),
+		};
 	}
 
-	public void AddToPlaylist(FLPattern p, uint tick, uint duration, FLPlaylistTrack track)
+	public FLChannelFilter CreateUnsortedFilter()
 	{
-		PlaylistItems.Add(new FLPlaylistItem(tick, p, duration, track));
+		return CreateChannelFilter("Unsorted");
 	}
-	public void AddToPlaylist(FLAutomation a, uint tick, uint duration, FLPlaylistTrack track)
+	public FLChannelFilter CreateAutomationFilter()
 	{
-		PlaylistItems.Add(new FLPlaylistItem(tick, a, duration, track));
+		return CreateChannelFilter("Automation");
 	}
-	public void AddTimeSigMarker(uint tick, byte num, byte denom)
+	public FLChannelFilter CreateChannelFilter(string name)
 	{
-		PlaylistMarkers.Add(new FLPlaylistMarker(tick, num + "/" + denom, (num, denom)));
+		var f = new FLChannelFilter(name);
+		ChannelFilters.Add(f);
+		return f;
+	}
+
+	public FLChannel CreateChannel(string name, byte midiChan, MIDIProgram midiProgram, FLChannelFilter filter)
+	{
+		var c = new FLChannel(name, midiChan, midiProgram, filter);
+		Channels.Add(c);
+		return c;
+	}
+	public FLAutomation CreateTempoAutomation(string name, FLChannelFilter filter)
+	{
+		var a = new FLAutomation(name, FLAutomation.MyType.Tempo, null, filter);
+		Automations.Add(a);
+		return a;
+	}
+	public FLAutomation CreateAutomation(string name, FLAutomation.MyType type, List<FLChannel> targets, FLChannelFilter filter)
+	{
+		var a = new FLAutomation(name, type, targets, filter);
+		Automations.Add(a);
+		return a;
+	}
+	public FLAutomation CreateAutomation(string name, FLAutomation.MyType type, FLChannel target, FLChannelFilter filter)
+	{
+		var a = new FLAutomation(name, type, new List<FLChannel>(1) { target }, filter);
+		Automations.Add(a);
+		return a;
+	}
+
+	public FLPattern CreatePattern()
+	{
+		var p = new FLPattern();
+		Patterns.Add(p);
+		return p;
 	}
 
 	public void Write(Stream s)
 	{
 		var w = new EndianBinaryWriter(s, ascii: true);
 
+		FirstPassAssignIDs();
+
 		WriteHeaderChunk(w);
 		WriteDataChunk(w);
+	}
+	private void FirstPassAssignIDs()
+	{
+		// Channel Filters must be alphabetical. Even if I don't sort them, they will be opened in the wrong order
+		ChannelFilters.Sort((c1, c2) => c1.Name.CompareTo(c2.Name));
+		for (ushort i = 0; i < ChannelFilters.Count; i++)
+		{
+			ChannelFilters[i].Index = i;
+		}
+		ushort chanIndex = 0;
+		foreach (FLChannel c in Channels)
+		{
+			c.Index = chanIndex++;
+		}
+		foreach (FLAutomation a in Automations)
+		{
+			a.Index = chanIndex++;
+		}
+		for (ushort i = 0; i < Patterns.Count; i++)
+		{
+			Patterns[i].Index = i;
+		}
+		for (ushort i = 0; i < Arrangements.Count; i++)
+		{
+			Arrangements[i].Index = i;
+		}
 	}
 	private void WriteHeaderChunk(EndianBinaryWriter w)
 	{
@@ -114,7 +172,10 @@ public sealed class FLProjectWriter
 
 		WriteProjectInfo(w);
 		WriteChannels(w);
-		WriteArrangement(w, 0);
+		foreach (FLArrangement a in Arrangements)
+		{
+			a.WriteArrangement(w);
+		}
 		WriteMoreStuffIDK(w);
 		WriteMixer(w);
 
@@ -194,10 +255,21 @@ public sealed class FLProjectWriter
 		WriteUTF16EventWithLength(w, FLEvent.ProjectDataPath, "\0");
 		WriteUTF16EventWithLength(w, FLEvent.ProjectComment, "\0");
 		// ProjectURL would go here
-		WriteArrayEventWithLength(w, FLEvent.ProjectTime, ProjectTime_Default);
+		FLProjectTime.Write(w, DateTime.Now, TimeSpan.Zero);
 
-		WriteChanFilters(w);
-		WritePatterns(w);
+		foreach (FLChannelFilter f in ChannelFilters)
+		{
+			f.Write(w);
+		}
+		Write32BitEvent(w, FLEvent.CurFilterNum, SelectedChannelFilter is null ? 0 : (uint)SelectedChannelFilter.Index);
+
+		WriteArrayEventWithLength(w, FLEvent.CtrlRecChan, Array.Empty<byte>());
+		// TODO: Why did this CtrlRecChan only show up sometimes? 0x1900 = 6_400
+		// Bytes: CtrlRecChan - 12 = [0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x19, 0x00, 0x00]
+		foreach (FLPattern p in Patterns)
+		{
+			p.WritePatternNotes(w);
+		}
 
 		// No idea what these mean, but there are 3 and they're always the same in all my projects.
 		// Dunno if it's MIDI keyboard related or something, because I only have 1
@@ -205,97 +277,31 @@ public sealed class FLProjectWriter
 		WriteArrayEventWithLength(w, FLEvent.MIDIInfo, MIDIInfo1);
 		WriteArrayEventWithLength(w, FLEvent.MIDIInfo, MIDIInfo2);
 	}
-	private void WriteChanFilters(EndianBinaryWriter w)
-	{
-		// TODO: object. Also, have an option to split tracks into separate chan filters (would help a lot for complex songs)
-		if (Automations.Count > 0)
-		{
-			WriteUTF16EventWithLength(w, FLEvent.ChanFilterName, "Automation\0");
-			WriteUTF16EventWithLength(w, FLEvent.ChanFilterName, "Unsorted\0");
-			Write32BitEvent(w, FLEvent.CurFilterNum, 1);
-		}
-		else
-		{
-			WriteUTF16EventWithLength(w, FLEvent.ChanFilterName, "Unsorted\0");
-			Write32BitEvent(w, FLEvent.CurFilterNum, 0);
-		}
-	}
-	private void WritePatterns(EndianBinaryWriter w)
-	{
-		if (Patterns.Count == 0)
-		{
-			WriteArrayEventWithLength(w, FLEvent.CtrlRecChan, Array.Empty<byte>());
-		}
-		else
-		{
-			// TODO: Why did this CtrlRecChan only show up sometimes?
-			// Bytes: CtrlRecChan - 12 = [0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x19, 0x00, 0x00]
-			WriteArrayEventWithLength(w, FLEvent.CtrlRecChan, Array.Empty<byte>()); // This appeared when resizing a pattern without changing it
-			for (int i = 0; i < Patterns.Count; i++)
-			{
-				Write16BitEvent(w, FLEvent.NewPattern, (ushort)(i + 1));
-				Patterns[i].WritePatternNotes(w);
-			}
-		}
-	}
 	private void WriteChannels(EndianBinaryWriter w)
 	{
-		for (int i = 0; i < Automations.Count; i++)
-		{
-			Automations[i].WriteAutomationConnection(w, (ushort)(Channels.Count + i), Channels);
-		}
-
-		uint chanFilter = Automations.Count == 0 ? 0u : 1;
-		ushort chanID = 0;
-		foreach (FLChannel c in Channels)
-		{
-			c.Write(w, chanID++, chanFilter);
-		}
-		// For some reason, pattern colors go between
-		for (int i = 0; i < Patterns.Count; i++)
-		{
-			Patterns[i].WriteColorAndNameIfNecessary(w, (ushort)(i + 1));
-		}
-		//
-		chanFilter = 0;
 		foreach (FLAutomation a in Automations)
 		{
-			a.Write(w, chanID++, chanFilter, PPQN);
+			a.WriteAutomationConnection(w);
+		}
+
+		foreach (FLChannel c in Channels)
+		{
+			c.Write(w);
+		}
+		// For some reason, pattern colors go between
+		foreach (FLPattern p in Patterns)
+		{
+			p.WriteColorAndNameIfNecessary(w);
+		}
+		//
+		foreach (FLAutomation a in Automations)
+		{
+			a.Write(w, PPQN);
 		}
 	}
-	private void WriteArrangement(EndianBinaryWriter w, ushort arrangementIndex)
+	private void WriteMoreStuffIDK(EndianBinaryWriter w)
 	{
-		Write16BitEvent(w, FLEvent.NewArrangement, arrangementIndex);
-		WriteUTF16EventWithLength(w, FLEvent.PlaylistArrangementName, "Arrangement\0");
-		Write8BitEvent(w, FLEvent.Unk_36, 0);
-
-		// Playlist Items
-
-		// Must be in order of AbsoluteTick
-		PlaylistItems.Sort((p1, p2) => p1.AbsoluteTick.CompareTo(p2.AbsoluteTick));
-
-		w.WriteEnum(FLEvent.PlaylistItems);
-		WriteArrayEventLength(w, (uint)PlaylistItems.Count * FLPlaylistItem.LEN);
-		foreach (FLPlaylistItem item in PlaylistItems)
-		{
-			item.Write(w, Patterns, Channels.Count, Automations, PlaylistTracks);
-		}
-
-		// Playlist Markers
-		foreach (FLPlaylistMarker mark in PlaylistMarkers)
-		{
-			mark.Write(w);
-		}
-
-		// Playlist Tracks
-		for (int i = 0; i < PlaylistTracks.Count; i++)
-		{
-			PlaylistTracks[i].Write(w, (uint)i);
-		}
-	}
-	private static void WriteMoreStuffIDK(EndianBinaryWriter w)
-	{
-		Write16BitEvent(w, FLEvent.CurArrangementNum, 0);
+		Write16BitEvent(w, FLEvent.CurArrangementNum, SelectedArrangement is null ? (ushort)0 : SelectedArrangement.Index);
 		Write8BitEvent(w, FLEvent.APDC, 1);
 		Write8BitEvent(w, FLEvent.Unk_39, 1);
 		Write8BitEvent(w, FLEvent.ShouldCutNotesFast, 0);
@@ -345,7 +351,7 @@ public sealed class FLProjectWriter
 		WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "Fruity LSD\0");
 		WriteArrayEventWithLength(w, FLEvent.NewPlugin, FLNewPlugin.FruityLSD_NewPlugin);
 		Write32BitEvent(w, FLEvent.PluginIcon, 0);
-		Write32BitEvent(w, FLEvent.Color, 0x565148); // R 86, G 81, B 72
+		Write32BitEvent(w, FLEvent.PluginColor, 0x565148); // R 72, G 81, B 86
 		WriteArrayEventWithLength(w, FLEvent.PluginParams, FLPluginParams.FruityLSD_PluginParams);
 
 		Write16BitEvent(w, FLEvent.NewInsertSlot, 0);

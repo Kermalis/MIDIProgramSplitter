@@ -2,21 +2,26 @@
 using System;
 using System.Collections.Generic;
 
-namespace MIDIProgramSplitter.FLP;
+namespace FLP;
 
 public sealed class FLPattern
 {
+	internal ushort Index;
+	internal ushort ID => (ushort)(Index + 1);
+
 	public readonly List<FLPatternNote> Notes;
 	public FLColor3? Color;
 	public string? Name;
 
-	public FLPattern()
+	internal FLPattern()
 	{
 		Notes = new List<FLPatternNote>();
 	}
 
 	internal void WritePatternNotes(EndianBinaryWriter w)
 	{
+		FLProjectWriter.Write16BitEvent(w, FLEvent.NewPattern, ID);
+
 		// Must be in order of AbsoluteTick
 		Notes.Sort((n1, n2) => n1.AbsoluteTick.CompareTo(n2.AbsoluteTick));
 
@@ -27,8 +32,15 @@ public sealed class FLPattern
 			note.Write(w);
 		}
 	}
-	internal void WriteColorAndNameIfNecessary(EndianBinaryWriter w, ushort id)
+	internal void WriteColorAndNameIfNecessary(EndianBinaryWriter w)
 	{
+		if (Name is null && Color is null)
+		{
+			return;
+		}
+
+		FLProjectWriter.Write16BitEvent(w, FLEvent.NewPattern, ID);
+
 		if (Name is not null)
 		{
 			if (Color is null)
@@ -38,13 +50,11 @@ public sealed class FLPattern
 
 			FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PatternName, Name + '\0');
 		}
-		else if (Color is null)
+		if (Color is not null)
 		{
-			return;
+			FLProjectWriter.Write32BitEvent(w, FLEvent.PatternColor, Color.Value.GetFLValue());
 		}
 
-		FLProjectWriter.Write16BitEvent(w, FLEvent.NewPattern, id);
-		FLProjectWriter.Write32BitEvent(w, FLEvent.PatternColor, Color.Value.GetFLValue());
 		// Dunno what these are, but they are always these 3 values no matter what I touch in the color picker.
 		// Patterns don't have icons, and the preset name/colors don't affect it, so idk
 		FLProjectWriter.Write32BitEvent(w, FLEvent.Unk_157, uint.MaxValue);
