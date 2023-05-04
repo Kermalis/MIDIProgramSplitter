@@ -93,7 +93,7 @@ public sealed class FLChannel
 	internal void Write(EndianBinaryWriter w, ushort chanID, uint filterNum)
 	{
 		FLProjectWriter.Write16BitEvent(w, FLEvent.NewChannel, chanID);
-		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelType, (byte)FLChanType.Osc3x_MIDIOut);
+		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelType, (byte)FLChannelType.FLPlugin);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "MIDI Out\0");
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.NewPlugin, FLNewPlugin.MIDIOut_NewPlugin_DeselectedTopLeft);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PluginName, Name + '\0');

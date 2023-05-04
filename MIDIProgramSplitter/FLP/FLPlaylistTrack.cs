@@ -1,40 +1,83 @@
 ﻿using Kermalis.EndianBinaryIO;
-using System;
 
 namespace MIDIProgramSplitter.FLP;
 
 public sealed class FLPlaylistTrack
 {
-	private static ReadOnlySpan<byte> Part1 => new byte[15] { 0x00, 0x00, 0x48, 0x51, 0x56, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x80, 0x3F };
-	private static ReadOnlySpan<byte> Part2 => new byte[28]
-	{
-		0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	};
-	private static ReadOnlySpan<byte> Part3 => new byte[19]
-	{
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00,
-		0x00, 0x00, 0x00
-	};
-
+	public float Size;
 	public bool GroupWithAbove;
+	/// <summary>Only works if this track is the parent of the group</summary>
+	public bool IsGroupCollapsed;
 	public string? Name;
+	public FLColor3 Color;
+	public uint Icon;
 
 	public FLPlaylistTrack()
 	{
-		// TODO: color
+		Color = new FLColor3(0x565148); // R 72, G 81, B 86
+		Size = 1f;
 	}
 
-	internal void Write(EndianBinaryWriter w, int index)
+	internal void Write(EndianBinaryWriter w, uint index)
 	{
 		w.WriteEnum(FLEvent.NewPlaylistTrack);
 		FLProjectWriter.WriteArrayEventLength(w, 66);
-		w.WriteUInt16((ushort)(index + 1));
-		w.WriteBytes(Part1);
-		w.WriteByte(index <= 0x20 ? (byte)0xF0 : (byte)0xFF); // TODO: Why
-		w.WriteBytes(Part2);
+
+		w.WriteUInt32(index + 1);
+
+		w.WriteByte(Color.R);
+		w.WriteByte(Color.G);
+		w.WriteByte(Color.B);
+		w.WriteByte(0);
+
+		w.WriteUInt32(Icon);
+
+		w.WriteByte(1);
+
+		w.WriteSingle(Size);
+
+		// The default height in pixels is 56
+		// If I "Lock to this size", this becomes 0x38 (56) instead of -16 or -1
+		// If I manually resize it, this becomes -56 and Size (above) changes
+		// Even if I reset the size to 100%, this stays -56 instead of going back to the weird value
+		w.WriteInt32(index <= 0x20 ? -16 : -1); // TODO: Why? 
+
+		w.WriteByte(0);
+		w.WriteByte(0); // Performance Motion
+		w.WriteInt16(0);
+
+		w.WriteByte(0);
+		w.WriteByte(0); // Performance Press
+		w.WriteInt16(0);
+
+		w.WriteByte(0);
+		w.WriteByte(5); // Performance Trigger Sync (4 beats)
+		w.WriteInt16(0);
+
+		w.WriteByte(0);
+		w.WriteBoolean(false); // Performance Queue
+		w.WriteInt16(0);
+
+		w.WriteByte(0);
+		w.WriteBoolean(true); // Performance Tolerant
+		w.WriteInt16(0);
+
+		w.WriteByte(0);
+		w.WriteByte(0); // Performance Position Sync
+		w.WriteInt16(0);
+
+		w.WriteByte(0);
 		w.WriteBoolean(GroupWithAbove);
-		w.WriteBytes(Part3);
+		w.WriteInt16(0);
+
+		w.WriteInt32(0); // Was 1 in "track mode - audio track" and 3 in "track mode - instrument track"
+
+		w.WriteInt32(-1); // In audio track mode, it was the insert
+		w.WriteInt32(-1); // In instrument track mode, it was the channelID
+
+		w.WriteBoolean(!IsGroupCollapsed);
+
+		w.WriteInt32(0); // Track Mode Instrument Track Options
 
 		if (Name is not null)
 		{

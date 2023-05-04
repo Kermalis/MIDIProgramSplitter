@@ -2,12 +2,14 @@
 
 namespace MIDIProgramSplitter.FLP;
 
-internal enum FLChanType : byte
+internal enum FLChannelType : byte
 {
 	Sampler,
+	/// <summary>Doesn't exist past FL12</summary>
 	TS404,
-	Osc3x_MIDIOut,
+	FLPlugin,
 	Layer,
+	// 4
 	Automation = 5,
 }
 
@@ -15,8 +17,22 @@ internal enum FLChanType : byte
 internal enum FLFadeStereo : ushort
 {
 	None = 0,
+	Unk_0 = 1 << 0,
 	SampleReversed = 1 << 1,
+	Unk_2 = 1 << 2,
+	Unk_3 = 1 << 3,
+	Unk_4 = 1 << 4,
+	Unk_5 = 1 << 5,
+	Unk_6 = 1 << 6,
+	Unk_7 = 1 << 7,
 	SampleReverseStereo = 1 << 8,
+	Unk_9 = 1 << 9,
+	Unk_10 = 1 << 10,
+	Unk_11 = 1 << 11,
+	Unk_12 = 1 << 12,
+	Unk_13 = 1 << 13,
+	Unk_14 = 1 << 14,
+	Unk_15 = 1 << 15,
 }
 
 internal enum FLMixerParamsEvent : byte

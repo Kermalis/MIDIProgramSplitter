@@ -44,7 +44,7 @@ public sealed class FLPattern
 		}
 
 		FLProjectWriter.Write16BitEvent(w, FLEvent.NewPattern, id);
-		FLProjectWriter.Write32BitEvent(w, FLEvent.PatternColor, Color.Value.GetValue());
+		FLProjectWriter.Write32BitEvent(w, FLEvent.PatternColor, Color.Value.GetFLValue());
 		// Dunno what these are, but they are always these 3 values no matter what I touch in the color picker.
 		// Patterns don't have icons, and the preset name/colors don't affect it, so idk
 		FLProjectWriter.Write32BitEvent(w, FLEvent.Unk_157, uint.MaxValue);

@@ -1,6 +1,5 @@
 ﻿using Kermalis.MIDI;
 using MIDIProgramSplitter.FLP;
-using System;
 using System.Collections.Generic;
 
 namespace MIDIProgramSplitter;
@@ -31,7 +30,7 @@ internal sealed class NewTrackPattern
 		// Randomize pattern colors for fun
 		var p = new FLPattern
 		{
-			Color = new FLColor3((uint)Random.Shared.Next(0x1_000_000)),
+			Color = FLColor3.GetRandom(),
 			Name = name,
 		};
 		w.Patterns.Add(p);

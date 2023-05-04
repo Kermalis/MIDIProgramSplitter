@@ -90,7 +90,7 @@ public sealed partial class FLAutomation
 	internal void Write(EndianBinaryWriter w, ushort id, uint filterNum, uint ppqn)
 	{
 		FLProjectWriter.Write16BitEvent(w, FLEvent.NewChannel, id);
-		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelType, (byte)FLChanType.Automation);
+		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelType, (byte)FLChannelType.Automation);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "\0");
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.NewPlugin, FLNewPlugin.Automation_NewPlugin_DeselectedTopLeft);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PluginName, Name + '\0');

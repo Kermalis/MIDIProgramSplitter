@@ -26,7 +26,7 @@ internal enum FLEvent : byte
 	ProjectTimeSigDenominator,
 	UseLoopPoints,
 	ChannelLoopType,
-	/// <summary><see cref="FLChanType"/></summary>
+	/// <summary><see cref="FLChannelType"/></summary>
 	ChannelType,
 	TargetFXTrack,
 	/// <summary>0 for circular, 2 for triangular</summary>

@@ -290,7 +290,7 @@ public sealed class FLProjectWriter
 		// Playlist Tracks
 		for (int i = 0; i < PlaylistTracks.Count; i++)
 		{
-			PlaylistTracks[i].Write(w, i);
+			PlaylistTracks[i].Write(w, (uint)i);
 		}
 	}
 	private static void WriteMoreStuffIDK(EndianBinaryWriter w)

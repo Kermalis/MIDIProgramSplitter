@@ -122,7 +122,7 @@ public sealed class FLProjectReader
 		{
 			case FLEvent.ChannelType:
 			{
-				LogLine(string.Format("Byte: {0} = {1} ({2})", ev, data, (FLChanType)data));
+				LogLine(string.Format("Byte: {0} = {1} ({2})", ev, data, (FLChannelType)data));
 				break;
 			}
 			default:

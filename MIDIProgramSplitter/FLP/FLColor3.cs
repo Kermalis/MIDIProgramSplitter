@@ -1,4 +1,6 @@
-﻿namespace MIDIProgramSplitter.FLP;
+﻿using System;
+
+namespace MIDIProgramSplitter.FLP;
 
 public struct FLColor3
 {
@@ -6,15 +8,26 @@ public struct FLColor3
 	public byte G;
 	public byte B;
 
-	public FLColor3(uint value)
+	/// <summary>This constructor takes <see cref="R"/> from the LSB and <see cref="B"/> from the MSB</summary>
+	public FLColor3(uint flValue)
 	{
-		R = (byte)(value & 0xFF);
-		G = (byte)((value >> 8) & 0xFF);
-		B = (byte)((value >> 16) & 0xFF);
-		// No A
+		R = (byte)(flValue & 0xFF);
+		G = (byte)((flValue >> 8) & 0xFF);
+		B = (byte)((flValue >> 16) & 0xFF);
+	}
+	public FLColor3(byte r, byte g, byte b)
+	{
+		R = r;
+		G = g;
+		B = b;
 	}
 
-	public uint GetValue()
+	public static FLColor3 GetRandom()
+	{
+		return new FLColor3((uint)Random.Shared.Next(0x1_000_000));
+	}
+
+	public uint GetFLValue()
 	{
 		return R | ((uint)G << 8) | ((uint)B << 16);
 	}
