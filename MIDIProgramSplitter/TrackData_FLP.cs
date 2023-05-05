@@ -144,15 +144,15 @@ partial class TrackData
 		// Split the operation to ensure 0.5 is centered
 		if (pan <= 64)
 		{
-			return Utils.LerpUnclamped(0, 64, 0, 0.5, pan);
+			return FLUtils.LerpUnclamped(0, 64, 0, 0.5, pan);
 		}
-		return Utils.LerpUnclamped(64, 127, 0.5, 1, pan);
+		return FLUtils.LerpUnclamped(64, 127, 0.5, 1, pan);
 	}
 	private static double PitchToAutomation(int midiUnits, double unitsPerCent)
 	{
 		// midiUnits is [-8192, 8191]
 		// 0 => -4800 cents, 0.5 => +0 cents, 1.0 => 4800 cents
-		return Utils.LerpUnclamped(-4800, 4800, 0, 1, midiUnits / unitsPerCent);
+		return FLUtils.LerpUnclamped(-4800, 4800, 0, 1, midiUnits / unitsPerCent);
 	}
 	private static double ProgramToAutomation(MIDIProgram program)
 	{

@@ -61,7 +61,7 @@ public sealed partial class FLAutomation
 		// Default min/max (10%/33%): 60 is 0.0d, 120 is 0.5d, 140 is 0.6666666865348816d, 180 is 1.0d
 		// Min/Max 0%/100%: 0.0d is 10, 0.5d is 266, 1.0d is 522
 
-		AddPoint(ticks, (double)Utils.LerpUnclamped(10, 522, 0, 1, bpm));
+		AddPoint(ticks, (double)FLUtils.LerpUnclamped(10, 522, 0, 1, bpm));
 	}
 	public void PadPoints(uint targetTicks, double defaultValue)
 	{
@@ -90,7 +90,7 @@ public sealed partial class FLAutomation
 	}
 	public void PadTempoPoints(uint targetTicks, double defaultTempo)
 	{
-		PadPoints(targetTicks, Utils.LerpUnclamped(10, 522, 0, 1, defaultTempo));
+		PadPoints(targetTicks, FLUtils.LerpUnclamped(10, 522, 0, 1, defaultTempo));
 	}
 
 	internal void Write(EndianBinaryWriter w, uint ppqn)
