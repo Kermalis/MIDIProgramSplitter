@@ -4,7 +4,7 @@ namespace FLP;
 
 public sealed class FLPlaylistTrack
 {
-	internal ushort Index;
+	internal readonly ushort Index;
 	internal ushort ID => (ushort)(Index + 1);
 
 	public float Size;
@@ -15,9 +15,10 @@ public sealed class FLPlaylistTrack
 	public FLColor3 Color;
 	public uint Icon;
 
-	public FLPlaylistTrack()
+	internal FLPlaylistTrack(ushort index)
 	{
-		Color = new FLColor3(0x565148); // R 72, G 81, B 86
+		Index = index;
+		Color = new FLColor3(72, 81, 86);
 		Size = 1f;
 	}
 

@@ -23,7 +23,7 @@ public sealed class FLArrangement
 		PlaylistTracks = new FLPlaylistTrack[NUM_PLAYLIST_TRACKS];
 		for (ushort i = 0; i < NUM_PLAYLIST_TRACKS; i++)
 		{
-			PlaylistTracks[i] = new FLPlaylistTrack { Index = i };
+			PlaylistTracks[i] = new FLPlaylistTrack(i);
 		}
 	}
 

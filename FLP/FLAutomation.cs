@@ -41,11 +41,24 @@ public sealed partial class FLAutomation
 	internal FLAutomation(string name, MyType type, List<FLChannel>? targets, FLChannelFilter filter)
 	{
 		Name = name;
-		Color = new FLColor3(0x60608E); // R 142, G 96, B 96
+		Color = GetColor(type);
 		Type = type;
 		Targets = targets;
 		Points = new List<Point>();
 		Filter = filter;
+	}
+
+	public static FLColor3 GetColor(MyType type)
+	{
+		switch (type)
+		{
+			case MyType.Volume: return new FLColor3(142, 96, 96);
+			case MyType.Panpot: return new FLColor3(129, 142, 96);
+			case MyType.Pitch: return new FLColor3(142, 96, 136);
+			case MyType.MIDIProgram: return new FLColor3(109, 96, 142);
+			case MyType.Tempo: return new FLColor3(142, 115, 96);
+		}
+		throw new ArgumentOutOfRangeException(nameof(type), type, null);
 	}
 
 	public void AddPoint(uint ticks, double value)

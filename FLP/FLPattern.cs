@@ -1,5 +1,4 @@
 ﻿using Kermalis.EndianBinaryIO;
-using System;
 using System.Collections.Generic;
 
 namespace FLP;
@@ -43,12 +42,9 @@ public sealed class FLPattern
 
 		if (Name is not null)
 		{
-			if (Color is null)
-			{
-				throw new Exception("If you supply a name, you must supply a color");
-			}
-
 			FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PatternName, Name + '\0');
+			// If you supply a name, you must supply a color
+			Color ??= new FLColor3(72, 81, 86);
 		}
 		if (Color is not null)
 		{

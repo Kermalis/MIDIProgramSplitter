@@ -14,7 +14,7 @@ public sealed class FLInsert
 		public FLFruityLSDOptions()
 		{
 			DLSPath = string.Empty;
-			Color = new FLColor3(0x565148); // R 72, G 81, B 86
+			Color = new FLColor3(72, 81, 86);
 		}
 
 		internal void Write(EndianBinaryWriter w, byte insertIndex)

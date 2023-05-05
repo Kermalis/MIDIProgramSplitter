@@ -91,7 +91,7 @@ public sealed class FLChannel
 	internal FLChannel(string name, byte midiChan, byte midiBank, MIDIProgram midiProgram, FLChannelFilter filter)
 	{
 		Name = name;
-		Color = new FLColor3(0x73725E); // R 94, G 114, B 115
+		Color = new FLColor3(96, 114, 115);
 		MIDIChannel = midiChan;
 		MIDIBank = midiBank;
 		MIDIProgram = midiProgram;
