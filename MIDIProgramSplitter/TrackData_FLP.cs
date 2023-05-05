@@ -41,8 +41,8 @@ partial class TrackData
 		{
 			FLChannel ourChan = ourChans[ourChanID++];
 
-			// TODO: Why is #3 before #2 sometimes etc
-			// Is it the dict order?
+			// TODO: Why is #3 before #2 sometimes etc. Is it the dict order?
+			// Most likely the dict order. it explains why the patterns weren't in order of absoluteTick
 			foreach (NewTrackPattern newP in newT.Patterns)
 			{
 				string pName = string.Format("{0} #{1} - {2}", name, ourPatID++, newT.Program);
@@ -61,60 +61,39 @@ partial class TrackData
 			FLAutomation a = CreateAuto(w, "Volume", FLAutomation.MyType.Volume, filter, ourChans);
 			foreach (MIDIEvent e in _volEvents)
 			{
-				byte v = ((ControllerMessage)e.Message).Value;
-				a.AddPoint((uint)e.Ticks, v / 127d);
+				a.AddPoint((uint)e.Ticks, VolumeToAutomation(((ControllerMessage)e.Message).Value));
 			}
-			AddAuto(w, a, maxTicks, 1d, ref automationTrackIndex, ref groupWithAbove); // I believe MIDI defaults to max channel volume
+			AddAuto(w, a, maxTicks, VolumeToAutomation(127), ref automationTrackIndex, ref groupWithAbove); // I believe MIDI defaults to max channel volume
 		}
 		if (_panEvents.Count != 0)
 		{
 			FLAutomation a = CreateAuto(w, "Panpot", FLAutomation.MyType.Panpot, filter, ourChans);
 			foreach (MIDIEvent e in _panEvents)
 			{
-				byte v = ((ControllerMessage)e.Message).Value;
-				// 0 => 100% left, 64 => center, 127 => 100% right
-				double dv; // Split the operation to ensure 0.5 is centered
-				if (v <= 64)
-				{
-					dv = Utils.LerpUnclamped(0, 64, 0, 0.5, v);
-				}
-				else
-				{
-					dv = Utils.LerpUnclamped(64, 127, 0.5, 1, v);
-				}
-				a.AddPoint((uint)e.Ticks, dv);
+				a.AddPoint((uint)e.Ticks, PanpotToAutomation(((ControllerMessage)e.Message).Value));
 			}
-			AddAuto(w, a, maxTicks, 0.5d, ref automationTrackIndex, ref groupWithAbove); // Centered
+			AddAuto(w, a, maxTicks, PanpotToAutomation(64), ref automationTrackIndex, ref groupWithAbove);
 		}
 		if (_pitchEvents.Count != 0)
 		{
+			int pitchBendRange = 12;
+			double unitsPerCent = 8_192d / (pitchBendRange * 100);
+
 			FLAutomation a = CreateAuto(w, "Pitch", FLAutomation.MyType.Pitch, filter, ourChans);
 			foreach (MIDIEvent e in _pitchEvents)
 			{
-				//int v = ((PitchBendMessage)e.Message).GetPitchAsInt();
-
-				// TODO: Get correct cents values
-				// This is theoretically correct:
-				//double dv = Utils.LerpUnclamped(-8192, 8191, 0, 1, v); // 0 => -4800 cents, 0.5 => +0 cents, 1.0 => 4800 cents
-				//double dv = Utils.LerpUnclamped(-256*256, (256*256)-1, 0, 1, v);
-
-				// This method gets close. Target is -4 but it gives -3. Probably -4 is a rounding error in GBA and -3 is correct
-				double range = 127d / 9600;
-				double dv = Utils.LerpUnclamped(-64, 63, 0.5 - range, 0.5 + range, ((PitchBendMessage)e.Message).MSB - 64);
-
-				a.AddPoint((uint)e.Ticks, dv);
+				a.AddPoint((uint)e.Ticks, PitchToAutomation(((PitchBendMessage)e.Message).GetPitchAsInt(), unitsPerCent));
 			}
-			AddAuto(w, a, maxTicks, 0.5d, ref automationTrackIndex, ref groupWithAbove); // +0 cents
+			AddAuto(w, a, maxTicks, PitchToAutomation(0, unitsPerCent), ref automationTrackIndex, ref groupWithAbove);
 		}
 		if (_programEvents.Count != 0)
 		{
 			FLAutomation a = CreateAuto(w, "Instrument", FLAutomation.MyType.MIDIProgram, filter, ourChans);
 			foreach (MIDIEvent e in _programEvents)
 			{
-				byte v = (byte)(((ProgramChangeMessage)e.Message).Program + 1);
-				a.AddPoint((uint)e.Ticks, v / 128d);
+				a.AddPoint((uint)e.Ticks, ProgramToAutomation(((ProgramChangeMessage)e.Message).Program));
 			}
-			AddAuto(w, a, maxTicks, 1 / 128d, ref automationTrackIndex, ref groupWithAbove); // Program 0
+			AddAuto(w, a, maxTicks, ProgramToAutomation(0), ref automationTrackIndex, ref groupWithAbove);
 		}
 	}
 	private FLAutomation CreateAuto(FLProjectWriter w, string type, FLAutomation.MyType flType, FLChannelFilter filter, List<FLChannel> ourChans)
@@ -149,5 +128,30 @@ partial class TrackData
 		}
 
 		automationTrackIndex++;
+	}
+
+	private static double VolumeToAutomation(byte vol)
+	{
+		return vol / 127d;
+	}
+	private static double PanpotToAutomation(byte pan)
+	{
+		// 0 => 100% left, 64 => center, 127 => 100% right
+		// Split the operation to ensure 0.5 is centered
+		if (pan <= 64)
+		{
+			return Utils.LerpUnclamped(0, 64, 0, 0.5, pan);
+		}
+		return Utils.LerpUnclamped(64, 127, 0.5, 1, pan);
+	}
+	private static double PitchToAutomation(int midiUnits, double unitsPerCent)
+	{
+		// midiUnits is [-8192, 8191]
+		// 0 => -4800 cents, 0.5 => +0 cents, 1.0 => 4800 cents
+		return Utils.LerpUnclamped(-4800, 4800, 0, 1, midiUnits / unitsPerCent);
+	}
+	private static double ProgramToAutomation(MIDIProgram program)
+	{
+		return (double)(program + 1) / 128d;
 	}
 }
