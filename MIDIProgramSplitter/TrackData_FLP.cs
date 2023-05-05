@@ -22,17 +22,20 @@ partial class TrackData
 	}
 	private List<FLChannel> FLP_CreateChannels(FLProjectWriter w, FLChannelFilter filter, Dictionary<MIDIProgram, NewTrack> dict)
 	{
+		byte midiChan = _trackChannel;
+		byte midiBank = _trackChannel;
+
 		var ourChans = new List<FLChannel>();
 		foreach (NewTrack newT in dict.Values)
 		{
-			ourChans.Add(w.CreateChannel(newT.Name, _trackChannel, newT.Program, filter));
+			ourChans.Add(w.CreateChannel(newT.Name, midiChan, midiBank, newT.Program, filter));
 		}
 		return ourChans;
 	}
 	private void FLP_CreatePatterns(FLProjectWriter w, string name, List<FLChannel> ourChans, Dictionary<MIDIProgram, NewTrack> dict)
 	{
 		FLArrangement arrang = w.Arrangements[0];
-		FLPlaylistTrack pTrack = arrang.PlaylistTracks[_trackIndex];
+		FLPlaylistTrack pTrack = arrang.PlaylistTracks[_trackIndex - 1]; // Meta track won't have one
 		pTrack.Name = name; // TODO: option to color based on instrument
 
 		int ourChanID = 0;
@@ -53,6 +56,7 @@ partial class TrackData
 	private void FLP_CreateAutomations(FLProjectWriter w, FLChannelFilter filter, List<FLChannel> ourChans, uint maxTicks,
 		ref int automationTrackIndex)
 	{
+		bool outputInstrumentAutos = true; // TODO: Make it an option. Don't need instrument autos if every track goes to a separate fruityLSD, and each split instrument is on a separate channel. Cannot have more than 16 unique instruments per FruityLSD
 		bool groupWithAbove = false;
 
 		// TODO: If there are 0 or 1 events, don't create automation pls
@@ -86,7 +90,7 @@ partial class TrackData
 			}
 			AddAuto(w, a, maxTicks, PitchToAutomation(0, unitsPerCent), ref automationTrackIndex, ref groupWithAbove);
 		}
-		if (_programEvents.Count != 0)
+		if (outputInstrumentAutos && _programEvents.Count != 0)
 		{
 			FLAutomation a = CreateAuto(w, "Instrument", FLAutomation.MyType.MIDIProgram, filter, ourChans);
 			foreach (MIDIEvent e in _programEvents)

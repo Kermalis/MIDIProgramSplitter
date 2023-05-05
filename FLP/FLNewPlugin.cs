@@ -1,70 +1,66 @@
-﻿using System;
+﻿using Kermalis.EndianBinaryIO;
 
 namespace FLP;
 
 internal struct FLNewPlugin
 {
-	// Type 0 for automation/midiOut/sampler
-	// Type 1 seems to be for insert effects
-	// Type 8 is VST according to https://github.com/Kaydax/FLParser/blob/2f48809bbf8f31c4ecf93051f5f1fa86a84b5468/ProjectParser.cs#L601
+	// VST Notes: https://github.com/Kaydax/FLParser/blob/2f48809bbf8f31c4ecf93051f5f1fa86a84b5468/ProjectParser.cs#L601
 
-	public static ReadOnlySpan<byte> MIDIOut_NewPlugin_DeselectedTopLeft => new byte[52] // [0x34]
+	public static void WriteMIDIOut(EndianBinaryWriter w)
 	{
-		0x00, 0x00, 0x00, 0x00, // Type
-		0x00, 0x00, 0x00, 0x00,
+		w.WriteEnum(FLEvent.NewPlugin);
+		FLProjectWriter.WriteArrayEventLength(w, 52);
 
-		0x02, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00,
-
-		0x54, 0x01, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00,
-
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00,
-
-		0x04, 0x00, 0x00, 0x00, // Selection/pos related. Was 0x0112 when selected, then 0x0004 when deselected in the same pos.
-		0x04, 0x00, 0x00, 0x00,
-
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-	};
-
-	public static ReadOnlySpan<byte> Automation_NewPlugin_DeselectedTopLeft => new byte[52] // [0x34]
+		w.WriteUInt32(0);
+		w.WriteUInt32(0);
+		w.WriteUInt32(2);
+		w.WriteUInt32(0);
+		w.WriteUInt32(0b1_0101_0100); // 0x154 (340)
+		w.WriteUInt32(0);
+		w.WriteUInt32(0);
+		w.WriteUInt32(0);
+		w.WriteUInt32(0);
+		w.WriteUInt32(4); // Selection/pos related. Was 0x0112 when selected, then 0x0004 when deselected in the same pos.
+		w.WriteUInt32(4);
+		w.WriteUInt32(0);
+		w.WriteUInt32(0);
+	}
+	public static void WriteAutomation(EndianBinaryWriter w)
 	{
-		0x00, 0x00, 0x00, 0x00, // Type
-		0x00, 0x00, 0x00, 0x00,
+		w.WriteEnum(FLEvent.NewPlugin);
+		FLProjectWriter.WriteArrayEventLength(w, 52);
 
-		0xFF, 0xFF, 0xFF, 0xFF,
-		0x00, 0x00, 0x00, 0x00,
-
-		0x54, 0x00, 0x00, 0x00,
-		0x05, 0x00, 0x00, 0x00,
-
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00,
-
-		0x06, 0x00, 0x00, 0x00,
-		0x06, 0x00, 0x00, 0x00,
-
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-	};
-
-	public static ReadOnlySpan<byte> FruityLSD_NewPlugin => new byte[52] // [0x34]
+		w.WriteUInt32(0);
+		w.WriteUInt32(0);
+		w.WriteInt32(-1);
+		w.WriteUInt32(0);
+		w.WriteUInt32(0b0_0101_0100); // 0x54 (84)
+		w.WriteUInt32(5);
+		w.WriteUInt32(0);
+		w.WriteUInt32(0);
+		w.WriteUInt32(0);
+		w.WriteUInt32(6);
+		w.WriteUInt32(6);
+		w.WriteUInt32(0);
+		w.WriteUInt32(0);
+	}
+	public static void WriteFruityLSD(EndianBinaryWriter w, byte insertID)
 	{
-		0x01, 0x00, 0x00, 0x00, // Type
-		0x00, 0x00, 0x00, 0x00,
+		w.WriteEnum(FLEvent.NewPlugin);
+		FLProjectWriter.WriteArrayEventLength(w, 52);
 
-		0x02, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00,
-
-		0x44, 0x01, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00,
-
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00,
-
-		0xD3, 0x03, 0x00, 0x00,
-		0x37, 0x03, 0x00, 0x00,
-
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-	};
+		w.WriteUInt32(insertID);
+		w.WriteUInt32(0);
+		w.WriteUInt32(2);
+		w.WriteUInt32(0);
+		w.WriteUInt32(0b1_0100_0100); // 0x144 (324)
+		w.WriteUInt32(0);
+		w.WriteUInt32(0);
+		w.WriteUInt32(0);
+		w.WriteUInt32(0);
+		w.WriteUInt32(0x3D3); // 979
+		w.WriteUInt32(0x337); // 823
+		w.WriteUInt32(0);
+		w.WriteUInt32(0);
+	}
 }

@@ -98,7 +98,7 @@ public sealed partial class FLAutomation
 		FLProjectWriter.Write16BitEvent(w, FLEvent.NewChannel, Index);
 		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelType, (byte)FLChannelType.Automation);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "\0");
-		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.NewPlugin, FLNewPlugin.Automation_NewPlugin_DeselectedTopLeft);
+		FLNewPlugin.WriteAutomation(w);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PluginName, Name + '\0');
 		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginIcon, 0);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginColor, Color.GetFLValue());

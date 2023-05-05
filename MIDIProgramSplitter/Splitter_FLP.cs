@@ -6,17 +6,18 @@ namespace MIDIProgramSplitter;
 
 partial class Splitter
 {
-	public void SaveFLP(string outFile)
+	public void SaveFLP(string outFile, string dlsPath)
 	{
 		using (FileStream s = File.Create(outFile))
 		{
 			var w = new FLProjectWriter
 			{
 				PPQN = _inMIDI.HeaderChunk.TimeDivision.PPQN_TicksPerQuarterNote,
+				TEMP_DLSPath = dlsPath,
 			};
 
 			FLChannelFilter? autoFilter = null;
-			int automationTrackIndex = _inMIDI.HeaderChunk.NumTracks;
+			int automationTrackIndex = _inMIDI.HeaderChunk.NumTracks - 1; // Meta track won't use one
 
 			FLP_AddMetaTrackEvents(w, ref autoFilter, ref automationTrackIndex, out decimal tempo, out byte timeSigNum, out byte timeSigDenom);
 			w.CurrentTempo = tempo;

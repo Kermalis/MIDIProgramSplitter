@@ -84,14 +84,16 @@ public sealed class FLChannel
 	public string Name;
 	public FLColor3 Color;
 	public byte MIDIChannel;
+	public byte MIDIBank;
 	public MIDIProgram MIDIProgram;
 	public FLChannelFilter Filter;
 
-	internal FLChannel(string name, byte midiChan, MIDIProgram midiProgram, FLChannelFilter filter)
+	internal FLChannel(string name, byte midiChan, byte midiBank, MIDIProgram midiProgram, FLChannelFilter filter)
 	{
 		Name = name;
 		Color = new FLColor3(0x73725E); // R 94, G 114, B 115
 		MIDIChannel = midiChan;
+		MIDIBank = midiBank;
 		MIDIProgram = midiProgram;
 		Filter = filter;
 	}
@@ -101,11 +103,11 @@ public sealed class FLChannel
 		FLProjectWriter.Write16BitEvent(w, FLEvent.NewChannel, Index);
 		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelType, (byte)FLChannelType.FLPlugin);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "MIDI Out\0");
-		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.NewPlugin, FLNewPlugin.MIDIOut_NewPlugin_DeselectedTopLeft);
+		FLNewPlugin.WriteMIDIOut(w);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PluginName, Name + '\0');
 		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginIcon, 0);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginColor, Color.GetFLValue());
-		FLPluginParams.WriteMIDIOut(w, MIDIChannel, MIDIProgram);
+		FLPluginParams.WriteMIDIOut(w, MIDIChannel, MIDIBank, MIDIProgram);
 		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelIsEnabled, 1);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.Delay, Delay);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.DelayReso, 0x800_080);

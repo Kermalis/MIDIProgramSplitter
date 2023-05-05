@@ -55,6 +55,8 @@ public sealed class FLProjectWriter
 	public FLChannelFilter? SelectedChannelFilter;
 	public FLArrangement? SelectedArrangement;
 
+	public string TEMP_DLSPath;
+
 	public FLProjectWriter()
 	{
 		// FL Default
@@ -71,6 +73,8 @@ public sealed class FLProjectWriter
 		{
 			new FLArrangement("Arrangement"),
 		};
+
+		TEMP_DLSPath = string.Empty;
 	}
 
 	public FLChannelFilter CreateUnsortedFilter()
@@ -88,9 +92,9 @@ public sealed class FLProjectWriter
 		return f;
 	}
 
-	public FLChannel CreateChannel(string name, byte midiChan, MIDIProgram midiProgram, FLChannelFilter filter)
+	public FLChannel CreateChannel(string name, byte midiChan, byte midiBank, MIDIProgram midiProgram, FLChannelFilter filter)
 	{
-		var c = new FLChannel(name, midiChan, midiProgram, filter);
+		var c = new FLChannel(name, midiChan, midiBank, midiProgram, filter);
 		Channels.Add(c);
 		return c;
 	}
@@ -309,13 +313,13 @@ public sealed class FLProjectWriter
 		Write8BitEvent(w, FLEvent.Unk_38, 1);
 	}
 
-	private static void WriteMixer(EndianBinaryWriter w)
+	private void WriteMixer(EndianBinaryWriter w)
 	{
+		// TODO: Option to put Fruity LSD on multiple inserts, in order to avoid clipping. Sinnoh leader clips HARD
 		WriteInsertMaster(w); // 0
-		WriteInsert1(w); // Different because of Fruity LSD
-		for (int i = 2; i <= 125; i++)
+		for (byte i = 1; i <= 125; i++)
 		{
-			WriteInsert2Through125(w);
+			WriteInsert1Through125(w, i, true);
 		}
 		WriteInsertCurrent(w); // 126
 
@@ -344,36 +348,18 @@ public sealed class FLProjectWriter
 		Write32BitEvent(w, FLEvent.InsertInChanNum, uint.MaxValue);
 		Write32BitEvent(w, FLEvent.InsertOutChanNum, 0);
 	}
-	private static void WriteInsert1(EndianBinaryWriter w)
+	private void WriteInsert1Through125(EndianBinaryWriter w, byte insertID, bool fruityLSD)
 	{
 		FLInsertParams.Write(w, false);
 
-		WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "Fruity LSD\0");
-		WriteArrayEventWithLength(w, FLEvent.NewPlugin, FLNewPlugin.FruityLSD_NewPlugin);
-		Write32BitEvent(w, FLEvent.PluginIcon, 0);
-		Write32BitEvent(w, FLEvent.PluginColor, 0x565148); // R 72, G 81, B 86
-		WriteArrayEventWithLength(w, FLEvent.PluginParams, FLPluginParams.FruityLSD_PluginParams);
-
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 0);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 1);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 2);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 3);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 4);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 5);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 6);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 7);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 8);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 9);
-		// bool[127]. Go to master and nothing else
-		w.WriteEnum(FLEvent.InsertRouting); WriteArrayEventLength(w, 127); w.WriteByte(1); w.WriteZeroes(126);
-		Write32BitEvent(w, FLEvent.Unk_165, 3);
-		Write32BitEvent(w, FLEvent.Unk_166, 1);
-		Write32BitEvent(w, FLEvent.InsertInChanNum, uint.MaxValue);
-		Write32BitEvent(w, FLEvent.InsertOutChanNum, uint.MaxValue);
-	}
-	private static void WriteInsert2Through125(EndianBinaryWriter w)
-	{
-		FLInsertParams.Write(w, false);
+		if (fruityLSD)
+		{
+			WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "Fruity LSD\0");
+			FLNewPlugin.WriteFruityLSD(w, insertID);
+			Write32BitEvent(w, FLEvent.PluginIcon, 0);
+			Write32BitEvent(w, FLEvent.PluginColor, 0x565148); // R 72, G 81, B 86
+			FLPluginParams.WriteFruityLSD(w, (byte)(insertID - 1), TEMP_DLSPath);
+		}
 
 		Write16BitEvent(w, FLEvent.NewInsertSlot, 0);
 		Write16BitEvent(w, FLEvent.NewInsertSlot, 1);
