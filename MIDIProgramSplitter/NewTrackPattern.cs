@@ -8,10 +8,10 @@ internal sealed class NewTrackPattern
 {
 	public sealed class Note
 	{
-		public MIDIEvent On;
-		public MIDIEvent Off;
+		public MIDIEvent<NoteOnMessage> On;
+		public IMIDIEvent Off;
 
-		public Note(MIDIEvent on, MIDIEvent off)
+		public Note(MIDIEvent<NoteOnMessage> on, IMIDIEvent off)
 		{
 			On = on;
 			Off = off;
@@ -25,20 +25,19 @@ internal sealed class NewTrackPattern
 		Notes = new List<Note>();
 	}
 
-	public void AddToFLP(FLProjectWriter w, FLChannel channel, FLPlaylistTrack pTrack, string? name)
+	public void AddToFLP(FLPSaver saver, FLChannel channel, FLPlaylistTrack pTrack, string? name)
 	{
-		// Randomize pattern colors for fun
-		FLPattern p = w.CreatePattern();
-		p.Color = FLColor3.GetRandom();
+		FLPattern p = saver.FLP.CreatePattern();
+		p.Color = saver.Options.GetPatternColor();
 		p.Name = name;
 
-		uint startTick = (uint)Notes[0].On.Ticks;
+		uint startTick = (uint)Notes[0].On.Ticks; // TODO: Some quantization?
 		uint endTick = (uint)Notes[Notes.Count - 1].Off.Ticks;
 
 		foreach (Note note in Notes)
 		{
-			MIDIEvent noteOnE = note.On;
-			var noteOn = (NoteOnMessage)noteOnE.Message;
+			MIDIEvent<NoteOnMessage> noteOnE = note.On;
+			NoteOnMessage noteOn = noteOnE.Msg;
 			uint onAbsoluteTick = (uint)noteOnE.Ticks;
 			uint offAbsoluteTick = (uint)note.Off.Ticks;
 
@@ -51,6 +50,6 @@ internal sealed class NewTrackPattern
 			});
 		}
 
-		w.Arrangements[0].AddToPlaylist(p, startTick, endTick - startTick, pTrack);
+		saver.FLP.Arrangements[0].AddToPlaylist(p, startTick, endTick - startTick, pTrack);
 	}
 }

@@ -1,9 +1,75 @@
 <Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        x:Class="MIDIProgramSplitter.GUI.MainWindow"
-        Title="MIDIProgramSplitter.GUI">
-    Welcome to Avalonia!
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+		x:Class="MIDIProgramSplitter.GUI.MainWindow"
+		Title="MIDI Program Splitter">
+	<Window.Styles>
+		<Style Selector="TextBlock">
+			<Setter Property="Margin" Value="5"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="TextWrapping" Value="Wrap" />
+		</Style>
+		<Style Selector="Button">
+			<Setter Property="Margin" Value="5"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+	</Window.Styles>
+	<DockPanel LastChildFill="True">
+
+		<StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="5">
+			<TextBlock Text="Input MIDI file:"/>
+			<Button Content="Browse" Click="OnClickedBrowseInputMIDI"/>
+			<TextBlock Name="InputMIDI"/>
+		</StackPanel>
+
+		<StackPanel DockPanel.Dock="Left" Orientation="Vertical" Margin="5">
+			<TextBlock Text="MIDI Export Options:"/>
+			<CheckBox />
+			<CheckBox />
+			<CheckBox />
+			<ComboBox />
+			<DropDownButton />
+
+			<StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+				<TextBlock Text="Output MIDI file:"/>
+				<Button Content="Browse" Click="OnClickedBrowseOutputMIDI"/>
+				<TextBlock Name="OutputMIDI"/>
+			</StackPanel>
+		</StackPanel>
+		
+		<StackPanel DockPanel.Dock="Right" Orientation="Vertical" Margin="5">
+			<TextBlock Text="FL Studio Export Options:"/>
+			<CheckBox />
+			<CheckBox />
+			<CheckBox />
+			<ComboBox />
+			<DropDownButton />
+
+			<StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+				<TextBlock Text="Output .FLP file:"/>
+				<Button Content="Browse" Click="OnClickedBrowseOutputFLP"/>
+				<TextBlock Name="OutputFLP"/>
+			</StackPanel>
+
+			<StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+				<TextBlock Text="&quot;Fruity LSD&quot; .DLS file (optional):"/>
+				<Button Content="Browse" Click="OnClickedBrowseInputDLS"/>
+				<TextBox Name="InputDLS" MaxLength="255"/>
+			</StackPanel>
+
+			<Button Content="Save .FLP" Click="OnClickedSaveFLP"/>
+		</StackPanel>
+		
+		<StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="5">
+			<TextBlock Text="Input MIDI File Information:"/>
+			<CheckBox />
+			<CheckBox />
+			<CheckBox />
+			<ComboBox />
+			<DropDownButton />
+		</StackPanel>
+		
+	</DockPanel>
 </Window>

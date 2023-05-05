@@ -46,29 +46,42 @@ internal static class Program
 			throw new Exception("Must have two arguments"); // TODO: Example usage
 		}
 
-		string inFile = args[0];
+		string inMIDIFile = args[0];
 		string dlsPath = args[1];
 		string outDir = args[2];
-		if (!File.Exists(inFile))
+		if (!File.Exists(inMIDIFile))
 		{
-			throw new Exception("File not found: \"" + inFile + '\"');
+			throw new Exception("File not found: \"" + inMIDIFile + '\"');
 		}
 		if (!Path.Exists(outDir))
 		{
 			throw new Exception("Output directory not found: \"" + outDir + '\"');
 		}
-		string outFile = Path.Combine(outDir, Path.GetFileName(inFile));
+		string outMIDIFile = Path.Combine(outDir, Path.GetFileName(inMIDIFile));
 
-		using (FileStream fs = File.OpenRead(inFile))
+		MIDIFile inMIDI;
+		using (FileStream fs = File.OpenRead(inMIDIFile))
 		{
-			var inMIDI = new MIDIFile(fs);
-			var splitter = new Splitter(inMIDI);
-			splitter.SaveMIDI(outFile);
-			splitter.SaveFLP(OUTFLP, dlsPath);
+			inMIDI = new MIDIFile(fs);
+		}
+
+		var splitter = new Splitter(inMIDI);
+		using (FileStream fs = File.Create(outMIDIFile))
+		{
+			splitter.SaveMIDI(fs);
+		}
+
+		using (FileStream fs = File.Create(OUTFLP))
+		{
+			var options = new FLPSaveOptions
+			{
+				DLSPath = dlsPath,
+			};
+			splitter.SaveFLP(fs, options);
 		}
 
 		Console.WriteLine();
-		Console.WriteLine("Successfully saved \"" + outFile + '\"');
+		Console.WriteLine("Successfully saved \"" + outMIDIFile + '\"');
 
 #if DEBUG
 		Console.ReadKey();
@@ -81,9 +94,9 @@ internal static class Program
 		//const string IN = @"C:\Users\Kermalis\Documents\Development\GitHub\MIDIProgramSplitter\TestOUT.flp";
 		//const string IN = @"D:\Music\Projects\Remix\Vs Colress.flp";
 
-		using (FileStream s = File.OpenRead(IN))
+		using (FileStream fs = File.OpenRead(IN))
 		{
-			var flp = new FLProjectReader(s);
+			var flp = new FLProjectReader(fs);
 
 #if DEBUG && WINDOWS
 			WinUtils.Win_SetClipboardString(flp.Log.ToString());

@@ -12,7 +12,7 @@ internal sealed partial class TrackData
 	{
 		public MIDIProgram Program;
 		public NewTrackPattern Pat;
-		public MIDIEvent NoteOnE;
+		public MIDIEvent<NoteOnMessage> NoteOnE;
 	}
 
 	private readonly byte _trackIndex;
@@ -27,10 +27,10 @@ internal sealed partial class TrackData
 	/// <summary>The new tracks created</summary>
 	private readonly NewTrackDict? _newTracks; // Allow null I guess since you could be copying automations for later with no notes
 
-	private readonly List<MIDIEvent> _volEvents;
-	private readonly List<MIDIEvent> _panEvents;
-	private readonly List<MIDIEvent> _pitchEvents;
-	private readonly List<MIDIEvent> _programEvents;
+	private readonly List<MIDIEvent<ControllerMessage>> _volEvents;
+	private readonly List<MIDIEvent<ControllerMessage>> _panEvents;
+	private readonly List<MIDIEvent<PitchBendMessage>> _pitchEvents;
+	private readonly List<MIDIEvent<ProgramChangeMessage>> _programEvents;
 
 	/// <summary>Scavenges <paramref name="inTrack"/> for events and splits them into new tracks</summary>
 	public TrackData(byte trackIndex, MIDITrackChunk inTrack)
@@ -40,10 +40,10 @@ internal sealed partial class TrackData
 
 		_usedPrograms = new HashSet<MIDIProgram>();
 		_playingNotes = new List<PlayingNote>();
-		_volEvents = new List<MIDIEvent>();
-		_panEvents = new List<MIDIEvent>();
-		_pitchEvents = new List<MIDIEvent>();
-		_programEvents = new List<MIDIEvent>();
+		_volEvents = new List<MIDIEvent<ControllerMessage>>();
+		_panEvents = new List<MIDIEvent<ControllerMessage>>();
+		_pitchEvents = new List<MIDIEvent<PitchBendMessage>>();
+		_programEvents = new List<MIDIEvent<ProgramChangeMessage>>();
 
 		_trackChannel = GatherTrackInfoFirstPass();
 
@@ -55,45 +55,49 @@ internal sealed partial class TrackData
 	{
 		byte chan = byte.MaxValue;
 
-		for (MIDIEvent? e = _inTrack.First; e is not null; e = e.Next)
+		for (IMIDIEvent? ev = _inTrack.First; ev is not null; ev = ev.Next)
 		{
-			switch (e.Message)
+			switch (ev)
 			{
-				case ProgramChangeMessage m:
+				case MIDIEvent<ProgramChangeMessage> e:
 				{
-					CheckChannel(m, ref chan);
-					_curProgram = m.Program;
+					CheckChannel(e.Msg, ref chan);
+					_curProgram = e.Msg.Program;
 					_programEvents.Add(e);
 					break;
 				}
-				case NoteOnMessage m:
+				case MIDIEvent<NoteOnMessage> e:
 				{
-					CheckChannel(m, ref chan);
-					if (m.Velocity != 0)
+					CheckChannel(e.Msg, ref chan);
+					if (e.Msg.Velocity != 0)
 					{
 						_usedPrograms.Add(_curProgram);
 					}
 					break;
 				}
-				case PitchBendMessage m:
+				case MIDIEvent<PitchBendMessage> e:
 				{
-					CheckChannel(m, ref chan);
+					CheckChannel(e.Msg, ref chan);
 					_pitchEvents.Add(e);
 					break;
 				}
-				case ControllerMessage m:
+				case MIDIEvent<ControllerMessage> e:
 				{
-					CheckChannel(m, ref chan);
-					switch (m.Controller)
+					CheckChannel(e.Msg, ref chan);
+					switch (e.Msg.Controller)
 					{
 						case ControllerType.ChannelVolume: _volEvents.Add(e); break;
 						case ControllerType.Pan: _panEvents.Add(e); break;
 					}
 					break;
 				}
-				case IMIDIChannelMessage m: // NoteOff, ChannelPressure, PolyphonicPressure
+				default:
 				{
-					CheckChannel(m, ref chan);
+					// NoteOff, ChannelPressure, PolyphonicPressure
+					if (ev.Msg is IMIDIChannelMessage m)
+					{
+						CheckChannel(m, ref chan);
+					}
 					break;
 				}
 			}
@@ -131,7 +135,7 @@ internal sealed partial class TrackData
 		_curProgram = 0;
 		NewTrackPattern? curPattern = null;
 
-		for (MIDIEvent? e = _inTrack.First; e is not null; e = e.Next)
+		for (IMIDIEvent? e = _inTrack.First; e is not null; e = e.Next)
 		{
 			if (SplitTrack_SpecialMessage(e, ts, ref curPattern))
 			{
@@ -145,14 +149,13 @@ internal sealed partial class TrackData
 		}
 	}
 	/// <summary>Returns false if this event should not be added to the new tracks</summary>
-	private bool SplitTrack_SpecialMessage(MIDIEvent e, NewTrackDict ts, ref NewTrackPattern? curPattern)
+	private bool SplitTrack_SpecialMessage(IMIDIEvent ev, NewTrackDict ts, ref NewTrackPattern? curPattern)
 	{
-		MIDIMessage msg = e.Message;
-		switch (msg)
+		switch (ev)
 		{
-			case ProgramChangeMessage m:
+			case MIDIEvent<ProgramChangeMessage> e:
 			{
-				_curProgram = m.Program;
+				_curProgram = e.Msg.Program;
 				curPattern = null;
 				if (!ts.VoiceIsUsed(_curProgram))
 				{
@@ -160,11 +163,11 @@ internal sealed partial class TrackData
 				}
 				break; // Add to all new tracks on this channel
 			}
-			case NoteOnMessage m:
+			case MIDIEvent<NoteOnMessage> e:
 			{
-				if (m.Velocity == 0)
+				if (e.Msg.Velocity == 0)
 				{
-					SplitTrack_StopPlayingNote(e, ts, m.Note);
+					SplitTrack_StopPlayingNote(e, ts, e.Msg.Note);
 				}
 				else
 				{
@@ -184,17 +187,17 @@ internal sealed partial class TrackData
 				}
 				return false; // Only add to correct new track
 			}
-			case NoteOffMessage m:
+			case MIDIEvent<NoteOffMessage> e:
 			{
 				// TODO: NoteOff velocity? It doesn't always match. NoteOn was 111 and NoteOff was 64
-				SplitTrack_StopPlayingNote(e, ts, m.Note);
+				SplitTrack_StopPlayingNote(e, ts, e.Msg.Note);
 				return false; // Only add to correct new track
 			}
-			case MetaMessage m:
+			case MIDIEvent<MetaMessage> e:
 			{
-				Console.WriteLine("Track {0}: {1}", _trackIndex, m);
+				Console.WriteLine("Track {0}: {1}", _trackIndex, e);
 
-				if (m.Type == MetaMessageType.TrackName)
+				if (e.Msg.Type == MetaMessageType.TrackName)
 				{
 					return false; // Ignore these
 				}
@@ -204,13 +207,13 @@ internal sealed partial class TrackData
 
 		return true;
 	}
-	private void SplitTrack_StopPlayingNote(MIDIEvent e, NewTrackDict ts, MIDINote n)
+	private void SplitTrack_StopPlayingNote(IMIDIEvent e, NewTrackDict ts, MIDINote n)
 	{
 		// Try to catch the oldest first
 		for (int i = 0; i < _playingNotes.Count; i++)
 		{
 			PlayingNote p = _playingNotes[i];
-			var noteOn = (NoteOnMessage)p.NoteOnE.Message;
+			NoteOnMessage noteOn = p.NoteOnE.Msg;
 			if (noteOn.Note == n) // Check channel also if not Format1
 			{
 				_playingNotes.RemoveAt(i);

@@ -68,9 +68,9 @@ public sealed partial class Splitter
 
 	private static bool TrackHasNonMetaMessages(MIDITrackChunk t)
 	{
-		for (MIDIEvent? e = t.First; e is not null; e = e.Next)
+		for (IMIDIEvent? e = t.First; e is not null; e = e.Next)
 		{
-			if (e.Message is not MetaMessage)
+			if (e is not MIDIEvent<MetaMessage>)
 			{
 				return true;
 			}
@@ -78,7 +78,7 @@ public sealed partial class Splitter
 		return false;
 	}
 
-	public void SaveMIDI(string outFile)
+	public void SaveMIDI(Stream s)
 	{
 		var midi = new MIDIFile(MIDIFormat.Format1, _inMIDI.HeaderChunk.TimeDivision, 1);
 
@@ -90,9 +90,6 @@ public sealed partial class Splitter
 			t.MIDI_AddNewTracks(midi);
 		}
 
-		using (FileStream fs = File.Create(outFile))
-		{
-			midi.Save(fs);
-		}
+		midi.Save(s);
 	}
 }

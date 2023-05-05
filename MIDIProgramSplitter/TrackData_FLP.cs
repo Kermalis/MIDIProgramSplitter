@@ -6,7 +6,7 @@ namespace MIDIProgramSplitter;
 
 partial class TrackData
 {
-	public void FLP_AddNewTracks(FLProjectWriter w, uint maxTicks, ref int automationTrackIndex)
+	public void FLP_AddNewTracks(FLPSaver saver)
 	{
 		if (_newTracks is null)
 		{
@@ -15,28 +15,29 @@ partial class TrackData
 
 		Dictionary<MIDIProgram, NewTrack> dict = _newTracks.Dict;
 		string name = string.Format("T{0:D2}C{1:D2}", _trackIndex + 1, _trackChannel + 1);
-		FLChannelFilter f = w.CreateChannelFilter(name);
-		List<FLChannel> ourChans = FLP_CreateChannels(w, f, dict);
-		FLP_CreatePatterns(w, name, ourChans, dict);
-		FLP_CreateAutomations(w, f, ourChans, maxTicks, ref automationTrackIndex);
+
+		FLChannelFilter f = saver.FLP.CreateChannelFilter(name);
+		List<FLChannel> ourChans = FLP_CreateChannels(saver, f, dict);
+		FLP_CreatePatterns(saver, name, ourChans, dict);
+		FLP_CreateAutomations(saver, f, ourChans);
 	}
-	private List<FLChannel> FLP_CreateChannels(FLProjectWriter w, FLChannelFilter filter, Dictionary<MIDIProgram, NewTrack> dict)
+	private List<FLChannel> FLP_CreateChannels(FLPSaver saver, FLChannelFilter filter, Dictionary<MIDIProgram, NewTrack> dict)
 	{
-		byte midiChan = _trackChannel;
+		byte midiChan = _trackChannel; // TODO: Option to make every MIDI track have a unique channel
 		byte midiBank = (byte)(_trackIndex - 1); // Meta track doesn't have one
 
 		var ourChans = new List<FLChannel>();
 		foreach (NewTrack newT in dict.Values)
 		{
-			ourChans.Add(w.CreateChannel(newT.Name, midiChan, midiBank, newT.Program, filter));
+			ourChans.Add(saver.FLP.CreateChannel(newT.Name, midiChan, midiBank, newT.Program, filter));
 		}
 		return ourChans;
 	}
-	private void FLP_CreatePatterns(FLProjectWriter w, string name, List<FLChannel> ourChans, Dictionary<MIDIProgram, NewTrack> dict)
+	private void FLP_CreatePatterns(FLPSaver saver, string name, List<FLChannel> ourChans, Dictionary<MIDIProgram, NewTrack> dict)
 	{
-		FLArrangement arrang = w.Arrangements[0];
+		FLArrangement arrang = saver.FLP.Arrangements[0];
 		FLPlaylistTrack pTrack = arrang.PlaylistTracks[_trackIndex - 1]; // Meta track won't have one
-		pTrack.Name = name; // TODO: option to color based on instrument
+		pTrack.Name = name;
 
 		int ourChanID = 0;
 		int ourPatID = 1;
@@ -49,89 +50,61 @@ partial class TrackData
 			foreach (NewTrackPattern newP in newT.Patterns)
 			{
 				string pName = string.Format("{0} #{1} - {2}", name, ourPatID++, newT.Program);
-				newP.AddToFLP(w, ourChan, pTrack, pName);
+				newP.AddToFLP(saver, ourChan, pTrack, pName);
 			}
 		}
 	}
-	private void FLP_CreateAutomations(FLProjectWriter w, FLChannelFilter filter, List<FLChannel> ourChans, uint maxTicks,
-		ref int automationTrackIndex)
+	private void FLP_CreateAutomations(FLPSaver saver, FLChannelFilter filter, List<FLChannel> ourChans)
 	{
 		bool outputInstrumentAutos = true; // TODO: Make it an option. Don't need instrument autos if every track goes to a separate fruityLSD, and each split instrument is on a separate channel. Cannot have more than 16 unique instruments per FruityLSD
-		bool groupWithAbove = false;
+		saver.CurGroupWithAbove = false;
 
 		// TODO: If there are 0 or 1 events, don't create automation pls
+		// TODO: Remove unnecessary points if the option is true
 		if (_volEvents.Count != 0)
 		{
-			FLAutomation a = CreateAuto(w, "Volume", FLAutomation.MyType.Volume, filter, ourChans);
-			foreach (MIDIEvent e in _volEvents)
+			FLAutomation a = CreateAuto(saver, "Volume", FLAutomation.MyType.Volume, filter, ourChans);
+			foreach (MIDIEvent<ControllerMessage> e in _volEvents)
 			{
-				a.AddPoint((uint)e.Ticks, VolumeToAutomation(((ControllerMessage)e.Message).Value));
+				a.AddPoint((uint)e.Ticks, VolumeToAutomation(e.Msg.Value));
 			}
-			AddAuto(w, a, maxTicks, VolumeToAutomation(127), ref automationTrackIndex, ref groupWithAbove); // I believe MIDI defaults to max channel volume
+			saver.AddMIDITrackAuto(a, VolumeToAutomation(127)); // I believe MIDI defaults to max channel volume
 		}
 		if (_panEvents.Count != 0)
 		{
-			FLAutomation a = CreateAuto(w, "Panpot", FLAutomation.MyType.Panpot, filter, ourChans);
-			foreach (MIDIEvent e in _panEvents)
+			FLAutomation a = CreateAuto(saver, "Panpot", FLAutomation.MyType.Panpot, filter, ourChans);
+			foreach (MIDIEvent<ControllerMessage> e in _panEvents)
 			{
-				a.AddPoint((uint)e.Ticks, PanpotToAutomation(((ControllerMessage)e.Message).Value));
+				a.AddPoint((uint)e.Ticks, PanpotToAutomation(e.Msg.Value));
 			}
-			AddAuto(w, a, maxTicks, PanpotToAutomation(64), ref automationTrackIndex, ref groupWithAbove);
+			saver.AddMIDITrackAuto(a, PanpotToAutomation(64));
 		}
 		if (_pitchEvents.Count != 0)
 		{
-			int pitchBendRange = 12;
-			double unitsPerCent = 8_192d / (pitchBendRange * 100);
+			double unitsPerCent = 8_192d / (saver.Options.PitchBendRange * 100);
 
-			FLAutomation a = CreateAuto(w, "Pitch", FLAutomation.MyType.Pitch, filter, ourChans);
-			foreach (MIDIEvent e in _pitchEvents)
+			FLAutomation a = CreateAuto(saver, "Pitch", FLAutomation.MyType.Pitch, filter, ourChans);
+			foreach (MIDIEvent<PitchBendMessage> e in _pitchEvents)
 			{
-				a.AddPoint((uint)e.Ticks, PitchToAutomation(((PitchBendMessage)e.Message).GetPitchAsInt(), unitsPerCent));
+				a.AddPoint((uint)e.Ticks, PitchToAutomation(e.Msg.GetPitchAsInt(), unitsPerCent));
 			}
-			AddAuto(w, a, maxTicks, PitchToAutomation(0, unitsPerCent), ref automationTrackIndex, ref groupWithAbove);
+			saver.AddMIDITrackAuto(a, PitchToAutomation(0, unitsPerCent));
 		}
 		if (outputInstrumentAutos && _programEvents.Count >= 2)
 		{
-			FLAutomation a = CreateAuto(w, "Instrument", FLAutomation.MyType.MIDIProgram, filter, ourChans);
-			foreach (MIDIEvent e in _programEvents)
+			FLAutomation a = CreateAuto(saver, "Instrument", FLAutomation.MyType.MIDIProgram, filter, ourChans);
+			foreach (MIDIEvent<ProgramChangeMessage> e in _programEvents)
 			{
-				a.AddPoint((uint)e.Ticks, ProgramToAutomation(((ProgramChangeMessage)e.Message).Program));
+				a.AddPoint((uint)e.Ticks, ProgramToAutomation(e.Msg.Program));
 			}
-			AddAuto(w, a, maxTicks, ProgramToAutomation(0), ref automationTrackIndex, ref groupWithAbove);
+			saver.AddMIDITrackAuto(a, ProgramToAutomation(0));
 		}
 	}
-	private FLAutomation CreateAuto(FLProjectWriter w, string type, FLAutomation.MyType flType, FLChannelFilter filter, List<FLChannel> ourChans)
+	private FLAutomation CreateAuto(FLPSaver saver, string type, FLAutomation.MyType flType, FLChannelFilter filter, List<FLChannel> ourChans)
 	{
-		FLAutomation a = w.CreateAutomation($"Track {_trackIndex + 1} {type}", flType, ourChans, filter);
-		a.Color = FLColor3.GetRandom();
+		FLAutomation a = saver.FLP.CreateAutomation($"Track {_trackIndex + 1} {type}", flType, ourChans, filter);
+		a.Color = saver.Options.GetAutomationColor(flType);
 		return a;
-	}
-	private static void AddAuto(FLProjectWriter w, FLAutomation a, uint maxTicks, double defaultVal,
-		ref int automationTrackIndex, ref bool groupWithAbove)
-	{
-		a.PadPoints(maxTicks, defaultVal);
-
-		FLArrangement arrang = w.Arrangements[0];
-		FLPlaylistTrack track = arrang.PlaylistTracks[automationTrackIndex];
-		arrang.AddToPlaylist(a, 0, maxTicks, track);
-
-		track.Size = 1f / 3;
-		track.GroupWithAbove = groupWithAbove;
-		if (groupWithAbove)
-		{
-			// Parent of the group
-			FLPlaylistTrack prev = arrang.PlaylistTracks[automationTrackIndex - 1];
-			if (!prev.GroupWithAbove)
-			{
-				prev.IsGroupCollapsed = true;
-			}
-		}
-		else
-		{
-			groupWithAbove = true;
-		}
-
-		automationTrackIndex++;
 	}
 
 	private static double VolumeToAutomation(byte vol)

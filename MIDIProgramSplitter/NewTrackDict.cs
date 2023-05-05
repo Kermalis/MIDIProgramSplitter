@@ -24,15 +24,15 @@ internal sealed class NewTrackDict
 		return Dict.ContainsKey(voice);
 	}
 
-	public void InsertEventIntoNewTrack(MIDIEvent e, MIDIProgram voice)
+	public void InsertEventIntoNewTrack(IMIDIEvent e, MIDIProgram voice)
 	{
-		Dict[voice].Track.InsertMessage(e.Ticks, e.Message);
+		Dict[voice].Track.InsertMessage(e.Ticks, e.Msg);
 	}
-	public void InsertEventIntoAllNewTracks(MIDIEvent e)
+	public void InsertEventIntoAllNewTracks(IMIDIEvent e)
 	{
 		foreach (NewTrack t in Dict.Values)
 		{
-			t.Track.InsertMessage(e.Ticks, e.Message);
+			t.Track.InsertMessage(e.Ticks, e.Msg);
 		}
 	}
 }

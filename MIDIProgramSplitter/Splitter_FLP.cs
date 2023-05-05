@@ -6,123 +6,60 @@ namespace MIDIProgramSplitter;
 
 partial class Splitter
 {
-	public void SaveFLP(string outFile, string dlsPath)
+	public void SaveFLP(Stream s, FLPSaveOptions options)
 	{
-		using (FileStream s = File.Create(outFile))
+		options.Validate();
+
+		var saver = new FLPSaver(options);
+
+		saver.MaxTicks = _maxTicks;
+		saver.FLP.PPQN = _inMIDI.HeaderChunk.TimeDivision.PPQN_TicksPerQuarterNote;
+
+		// Place automations under the MIDItrack patterns. MIDI metatrack doesn't use a playlist track
+		saver.AutomationTrackIndex = _inMIDI.HeaderChunk.NumTracks - 1;
+
+		for (int i = 0; i < saver.AutomationTrackIndex; i++)
 		{
-			var w = new FLProjectWriter
+			FLInsert ins = saver.FLP.Inserts[i + 1]; // Skip master insert
+			ins.Color = saver.Options.GetInsertColor();
+			ins.Name = string.Format("T{0:D2}", i + 2); // Skip meta track
+			ins.FruityLSD = new FLInsert.FLFruityLSDOptions
 			{
-				PPQN = _inMIDI.HeaderChunk.TimeDivision.PPQN_TicksPerQuarterNote,
+				DLSPath = options.DLSPath,
+				MIDIBank = (byte)i,
 			};
-
-			FLChannelFilter? autoFilter = null;
-			int automationTrackIndex = _inMIDI.HeaderChunk.NumTracks - 1; // Meta track won't use one
-
-			for (int i = 0; i < automationTrackIndex; i++)
-			{
-				FLInsert ins = w.Inserts[i + 1]; // Skip master insert
-				ins.Color = FLColor3.GetRandom();
-				ins.Name = string.Format("T{0:D2}", i + 2); // Skip meta track
-				ins.FruityLSD = new FLInsert.FLFruityLSDOptions
-				{
-					DLSPath = dlsPath,
-					MIDIBank = (byte)i,
-				};
-			}
-
-			FLP_AddMetaTrackEvents(w, ref autoFilter, ref automationTrackIndex, out decimal tempo, out byte timeSigNum, out byte timeSigDenom);
-			w.CurrentTempo = tempo;
-			w.TimeSigNumerator = timeSigNum;
-			w.TimeSigDenominator = timeSigDenom;
-
-			foreach (TrackData t in _splitTracks)
-			{
-				t.FLP_AddNewTracks(w, _maxTicks, ref automationTrackIndex);
-			}
-
-			w.Write(s);
 		}
+
+		FLP_AddMetaTrackEvents(saver);
+
+		foreach (TrackData t in _splitTracks)
+		{
+			t.FLP_AddNewTracks(saver);
+		}
+
+		saver.FLP.Write(s);
 	}
 
-	private void FLP_AddMetaTrackEvents(FLProjectWriter w, ref FLChannelFilter? autoFilter, ref int automationTrackIndex,
-		out decimal tempo, out byte timeSigNum, out byte timeSigDenom)
+	private void FLP_AddMetaTrackEvents(FLPSaver saver)
 	{
-		const int DEFAULT_MIDI_TEMPO = 120;
-
-		tempo = DEFAULT_MIDI_TEMPO;
-		MIDIEvent? firstTempo = null;
-		FLAutomation? tempoAuto = null;
-		timeSigNum = 4;
-		timeSigDenom = 4;
-		MIDIEvent? firstTimeSig = null;
-		bool createdFirstTimeSigMarker = false;
-
-		for (MIDIEvent? e = _metaTrack.First; e is not null; e = e.Next)
+		for (IMIDIEvent? ev = _metaTrack.First; ev is not null; ev = ev.Next)
 		{
-			var m = (MetaMessage)e.Message;
-			switch (m.Type)
+			var e = (MIDIEvent<MetaMessage>)ev;
+			switch (e.Msg.Type)
 			{
 				case MetaMessageType.Tempo:
 				{
-					FLP_HandleTempo(e, m, w, ref autoFilter, ref automationTrackIndex, ref tempo, ref firstTempo, ref tempoAuto);
+					saver.HandleTempo(e);
 					break;
 				}
 				case MetaMessageType.TimeSignature:
 				{
-					FLP_HandleTimeSig(e, m, w, ref timeSigNum, ref timeSigDenom, ref firstTimeSig, ref createdFirstTimeSigMarker);
+					saver.HandleTimeSig(e);
 					break;
 				}
 			}
 		}
 
-		tempoAuto?.PadTempoPoints(_maxTicks, DEFAULT_MIDI_TEMPO);
-	}
-	private void FLP_HandleTempo(MIDIEvent e, MetaMessage m, FLProjectWriter w,
-		ref FLChannelFilter? autoFilter, ref int automationTrackIndex, ref decimal tempo, ref MIDIEvent? firstTempo, ref FLAutomation? tempoAuto)
-	{
-		m.ReadTempoMessage(out _, out decimal bpm);
-		if (firstTempo is null)
-		{
-			tempo = bpm;
-			firstTempo = e;
-			return;
-		}
-
-		// This is the 2nd or after change. 2nd will create the autoclip
-		if (tempoAuto is null)
-		{
-			autoFilter ??= w.CreateAutomationFilter();
-			tempoAuto = w.CreateTempoAutomation("Tempo", autoFilter);
-
-			FLArrangement arrang = w.Arrangements[0];
-			FLPlaylistTrack track = arrang.PlaylistTracks[automationTrackIndex++];
-			track.Size = 1f / 3;
-			arrang.AddToPlaylist(tempoAuto, 0, _maxTicks, track);
-
-			tempoAuto.AddTempoPoint((uint)firstTempo.Ticks, tempo);
-		}
-		tempoAuto.AddTempoPoint((uint)e.Ticks, bpm);
-	}
-	private static void FLP_HandleTimeSig(MIDIEvent e, MetaMessage m, FLProjectWriter w,
-		ref byte timeSigNum, ref byte timeSigDenom, ref MIDIEvent? firstTimeSig, ref bool createdFirstTimeSigMarker)
-	{
-		m.ReadTimeSignatureMessage(out byte num, out byte denom, out _, out _);
-		if (firstTimeSig is null)
-		{
-			timeSigNum = num;
-			timeSigDenom = denom;
-			firstTimeSig = e;
-			return;
-		}
-
-		FLArrangement arrang = w.Arrangements[0];
-
-		// This is the 2nd or after change. 2nd will create the marker for #1 and #2
-		if (!createdFirstTimeSigMarker)
-		{
-			createdFirstTimeSigMarker = true;
-			arrang.AddTimeSigMarker((uint)firstTimeSig.Ticks, timeSigNum, timeSigDenom);
-		}
-		arrang.AddTimeSigMarker((uint)e.Ticks, num, denom);
+		saver.TempoAuto?.PadTempoPoints(_maxTicks, 120);
 	}
 }
