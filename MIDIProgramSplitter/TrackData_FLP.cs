@@ -23,7 +23,7 @@ partial class TrackData
 	private List<FLChannel> FLP_CreateChannels(FLProjectWriter w, FLChannelFilter filter, Dictionary<MIDIProgram, NewTrack> dict)
 	{
 		byte midiChan = _trackChannel;
-		byte midiBank = _trackChannel;
+		byte midiBank = (byte)(_trackIndex - 1); // Meta track doesn't have one
 
 		var ourChans = new List<FLChannel>();
 		foreach (NewTrack newT in dict.Values)
@@ -90,7 +90,7 @@ partial class TrackData
 			}
 			AddAuto(w, a, maxTicks, PitchToAutomation(0, unitsPerCent), ref automationTrackIndex, ref groupWithAbove);
 		}
-		if (outputInstrumentAutos && _programEvents.Count != 0)
+		if (outputInstrumentAutos && _programEvents.Count >= 2)
 		{
 			FLAutomation a = CreateAuto(w, "Instrument", FLAutomation.MyType.MIDIProgram, filter, ourChans);
 			foreach (MIDIEvent e in _programEvents)

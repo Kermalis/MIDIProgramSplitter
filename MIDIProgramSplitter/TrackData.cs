@@ -101,6 +101,7 @@ internal sealed partial class TrackData
 
 		if (chan == byte.MaxValue)
 		{
+			// TODO: Allow, but skip track
 			throw new InvalidDataException($"Track {_trackIndex} had no MIDI channel events...");
 		}
 		return chan;

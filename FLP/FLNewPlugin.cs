@@ -44,12 +44,12 @@ internal struct FLNewPlugin
 		w.WriteUInt32(0);
 		w.WriteUInt32(0);
 	}
-	public static void WriteFruityLSD(EndianBinaryWriter w, byte insertID)
+	public static void WriteFruityLSD(EndianBinaryWriter w, byte insertIndex)
 	{
 		w.WriteEnum(FLEvent.NewPlugin);
 		FLProjectWriter.WriteArrayEventLength(w, 52);
 
-		w.WriteUInt32(insertID);
+		w.WriteUInt32(insertIndex);
 		w.WriteUInt32(0);
 		w.WriteUInt32(2);
 		w.WriteUInt32(0);

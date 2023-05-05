@@ -43,6 +43,7 @@ public sealed class FLProjectWriter
 		0xFF, 0xFF
 	};
 
+	public readonly FLInsert[] Inserts;
 	public readonly List<FLChannelFilter> ChannelFilters;
 	public readonly List<FLChannel> Channels;
 	public readonly List<FLAutomation> Automations;
@@ -54,8 +55,6 @@ public sealed class FLProjectWriter
 	public byte TimeSigDenominator;
 	public FLChannelFilter? SelectedChannelFilter;
 	public FLArrangement? SelectedArrangement;
-
-	public string TEMP_DLSPath;
 
 	public FLProjectWriter()
 	{
@@ -74,7 +73,11 @@ public sealed class FLProjectWriter
 			new FLArrangement("Arrangement"),
 		};
 
-		TEMP_DLSPath = string.Empty;
+		Inserts = new FLInsert[127];
+		for (byte i = 0; i < 127; i++)
+		{
+			Inserts[i] = new FLInsert(i);
+		}
 	}
 
 	public FLChannelFilter CreateUnsortedFilter()
@@ -312,91 +315,15 @@ public sealed class FLProjectWriter
 		Write8BitEvent(w, FLEvent.EEAutoMode, 0);
 		Write8BitEvent(w, FLEvent.Unk_38, 1);
 	}
-
 	private void WriteMixer(EndianBinaryWriter w)
 	{
-		// TODO: Option to put Fruity LSD on multiple inserts, in order to avoid clipping. Sinnoh leader clips HARD
-		WriteInsertMaster(w); // 0
-		for (byte i = 1; i <= 125; i++)
+		foreach (FLInsert i in Inserts)
 		{
-			WriteInsert1Through125(w, i, true);
+			i.Write(w);
 		}
-		WriteInsertCurrent(w); // 126
 
 		FLMixerParams.Write(w);
 
-		Write32BitEvent(w, FLEvent.WindowH, 1286);
-	}
-	private static void WriteInsertMaster(EndianBinaryWriter w)
-	{
-		FLInsertParams.Write(w, true);
-
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 0);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 1);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 2);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 3);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 4);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 5);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 6);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 7);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 8);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 9);
-		// bool[127]. Go to nothing
-		w.WriteEnum(FLEvent.InsertRouting); WriteArrayEventLength(w, 127); w.WriteZeroes(127);
-		Write32BitEvent(w, FLEvent.Unk_165, 3);
-		Write32BitEvent(w, FLEvent.Unk_166, 1);
-		Write32BitEvent(w, FLEvent.InsertInChanNum, uint.MaxValue);
-		Write32BitEvent(w, FLEvent.InsertOutChanNum, 0);
-	}
-	private void WriteInsert1Through125(EndianBinaryWriter w, byte insertID, bool fruityLSD)
-	{
-		FLInsertParams.Write(w, false);
-
-		if (fruityLSD)
-		{
-			WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "Fruity LSD\0");
-			FLNewPlugin.WriteFruityLSD(w, insertID);
-			Write32BitEvent(w, FLEvent.PluginIcon, 0);
-			Write32BitEvent(w, FLEvent.PluginColor, 0x565148); // R 72, G 81, B 86
-			FLPluginParams.WriteFruityLSD(w, (byte)(insertID - 1), TEMP_DLSPath);
-		}
-
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 0);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 1);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 2);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 3);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 4);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 5);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 6);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 7);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 8);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 9);
-		// bool[127]. Go to master and nothing else
-		w.WriteEnum(FLEvent.InsertRouting); WriteArrayEventLength(w, 127); w.WriteByte(1); w.WriteZeroes(126);
-		Write32BitEvent(w, FLEvent.Unk_165, 3);
-		Write32BitEvent(w, FLEvent.Unk_166, 1);
-		Write32BitEvent(w, FLEvent.InsertInChanNum, uint.MaxValue);
-		Write32BitEvent(w, FLEvent.InsertOutChanNum, uint.MaxValue);
-	}
-	private static void WriteInsertCurrent(EndianBinaryWriter w)
-	{
-		FLInsertParams.Write(w, true);
-
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 0);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 1);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 2);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 3);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 4);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 5);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 6);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 7);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 8);
-		Write16BitEvent(w, FLEvent.NewInsertSlot, 9);
-		// bool[127]. Go to nothing
-		w.WriteEnum(FLEvent.InsertRouting); WriteArrayEventLength(w, 127); w.WriteZeroes(127);
-		Write32BitEvent(w, FLEvent.Unk_165, 3);
-		Write32BitEvent(w, FLEvent.Unk_166, 1);
-		Write32BitEvent(w, FLEvent.InsertInChanNum, uint.MaxValue);
-		Write32BitEvent(w, FLEvent.InsertOutChanNum, uint.MaxValue);
+		Write32BitEvent(w, FLEvent.WindowH, 1286); // WindowH for what? Piano roll? Mixer?
 	}
 }

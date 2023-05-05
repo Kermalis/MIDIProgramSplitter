@@ -13,11 +13,22 @@ partial class Splitter
 			var w = new FLProjectWriter
 			{
 				PPQN = _inMIDI.HeaderChunk.TimeDivision.PPQN_TicksPerQuarterNote,
-				TEMP_DLSPath = dlsPath,
 			};
 
 			FLChannelFilter? autoFilter = null;
 			int automationTrackIndex = _inMIDI.HeaderChunk.NumTracks - 1; // Meta track won't use one
+
+			for (int i = 0; i < automationTrackIndex; i++)
+			{
+				FLInsert ins = w.Inserts[i + 1]; // Skip master insert
+				ins.Color = FLColor3.GetRandom();
+				ins.Name = string.Format("T{0:D2}", i + 2); // Skip meta track
+				ins.FruityLSD = new FLInsert.FLFruityLSDOptions
+				{
+					DLSPath = dlsPath,
+					MIDIBank = (byte)i,
+				};
+			}
 
 			FLP_AddMetaTrackEvents(w, ref autoFilter, ref automationTrackIndex, out decimal tempo, out byte timeSigNum, out byte timeSigDenom);
 			w.CurrentTempo = tempo;
