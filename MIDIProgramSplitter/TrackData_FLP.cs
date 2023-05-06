@@ -1,6 +1,7 @@
 ﻿using FLP;
 using Kermalis.MIDI;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MIDIProgramSplitter;
 
@@ -14,11 +15,12 @@ partial class TrackData
 		}
 
 		Dictionary<MIDIProgram, NewTrack> dict = _newTracks.Dict;
-		string name = string.Format("T{0:D2}C{1:D2}", _trackIndex + 1, _trackChannel + 1);
+		string name2 = string.Format("T{0:D2}", _trackIndex + 1);
+		string name = name2 + string.Format("C{0:D2}", _trackChannel + 1);
 
 		FLChannelFilter f = saver.FLP.CreateChannelFilter(name);
 		List<FLChannel> ourChans = FLP_CreateChannels(saver, f, dict);
-		FLP_CreatePatterns(saver, name, ourChans, dict);
+		FLP_CreatePatterns(saver, name2, ourChans, dict);
 		FLP_CreateAutomations(saver, f, ourChans);
 	}
 	private List<FLChannel> FLP_CreateChannels(FLPSaver saver, FLChannelFilter filter, Dictionary<MIDIProgram, NewTrack> dict)
@@ -39,6 +41,8 @@ partial class TrackData
 		FLPlaylistTrack pTrack = arrang.PlaylistTracks[_trackIndex - 1]; // Meta track won't have one
 		pTrack.Name = name;
 
+		var createdPats = new List<(NewTrackPattern, FLPattern)>();
+
 		int ourChanID = 0;
 		int ourPatID = 1;
 		foreach (NewTrack newT in dict.Values)
@@ -49,11 +53,42 @@ partial class TrackData
 			// Most likely the dict order. it explains why the patterns weren't in order of absoluteTick
 			foreach (NewTrackPattern newP in newT.Patterns)
 			{
-				string pName = string.Format("{0} #{1} - {2}", name, ourPatID++, newT.Program);
-				newP.AddToFLP(saver, ourChan, pTrack, newT.Program, pName);
+				// First check if an identical pattern exists
+				if (FLP_CheckForDuplicatePattern(createdPats, newP, out FLPattern? flPat))
+				{
+					newP.AddToFLP_Duplicate(saver, flPat, pTrack);
+				}
+				else
+				{
+					string pName = string.Format("{0} #{1}", name, ourPatID++);
+					if (saver.Options.AppendInstrumentNamesToPatterns)
+					{
+						pName += " - " + newT.Program;
+					}
+					flPat = newP.AddToFLP(saver, ourChan, pTrack, newT.Program, pName);
+					createdPats.Add((newP, flPat));
+				}
 			}
 		}
 	}
+	private static bool FLP_CheckForDuplicatePattern(List<(NewTrackPattern, FLPattern)> createdPats, NewTrackPattern newP,
+		[NotNullWhen(true)] out FLPattern? flPat)
+	{
+		foreach ((NewTrackPattern, FLPattern) tup in createdPats)
+		{
+			if (tup.Item1.SequenceEqual(newP))
+			{
+				flPat = tup.Item2;
+				return true;
+			}
+		}
+		flPat = null;
+		return false;
+	}
+
+	// TODO: Instrument automations may be weird if they're on the same tick as a note. No real way to control the order in which it happens.
+	// For that case, we need to split every MIDIOut into a unique chan/bank and not do instrument automations
+	// We need to warn the user that there are events and notes on the same tick so they can take action if required
 	private void FLP_CreateAutomations(FLPSaver saver, FLChannelFilter filter, List<FLChannel> ourChans)
 	{
 		bool outputInstrumentAutos = true; // TODO: Make it an option. Don't need instrument autos if every track goes to a separate fruityLSD, and each split instrument is on a separate channel. Cannot have more than 16 unique instruments per FruityLSD

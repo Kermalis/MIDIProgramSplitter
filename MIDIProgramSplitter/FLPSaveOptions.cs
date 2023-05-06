@@ -34,6 +34,8 @@ public sealed class FLPSaveOptions
 	public bool GroupMIDITrackAutomations;
 	public bool CollapseAutomationGroups;
 
+	public bool AppendInstrumentNamesToPatterns;
+
 	public EPatternColorMode PatternColorMode;
 	public EInsertColorMode InsertColorMode;
 	public EAutomationColorMode AutomationColorMode;
@@ -47,6 +49,8 @@ public sealed class FLPSaveOptions
 
 		GroupMIDITrackAutomations = true;
 		CollapseAutomationGroups = true;
+
+		//AppendInstrumentNamesToPatterns = true;
 
 		PatternColorMode = EPatternColorMode.Instrument;
 	}
