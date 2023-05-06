@@ -50,7 +50,7 @@ partial class TrackData
 			foreach (NewTrackPattern newP in newT.Patterns)
 			{
 				string pName = string.Format("{0} #{1} - {2}", name, ourPatID++, newT.Program);
-				newP.AddToFLP(saver, ourChan, pTrack, pName);
+				newP.AddToFLP(saver, ourChan, pTrack, newT.Program, pName);
 			}
 		}
 	}
@@ -60,44 +60,44 @@ partial class TrackData
 		saver.CurGroupWithAbove = false;
 
 		// TODO: If there are 0 or 1 events, don't create automation pls
-		// TODO: Remove unnecessary points if the option is true
-		if (_volEvents.Count != 0)
+		// TODO: Option to not use the optimized lists
+		if (_volEventsOptimized.Count != 0)
 		{
 			FLAutomation a = CreateAuto(saver, "Volume", FLAutomation.MyType.Volume, filter, ourChans);
-			foreach (MIDIEvent<ControllerMessage> e in _volEvents)
+			foreach (MIDIEvent<ControllerMessage> e in _volEventsOptimized)
 			{
 				a.AddPoint((uint)e.Ticks, VolumeToAutomation(e.Msg.Value));
 			}
-			saver.AddMIDITrackAuto(a, VolumeToAutomation(127)); // I believe MIDI defaults to max channel volume
+			saver.AddMIDITrackAuto(a, VolumeToAutomation(DEFAULT_MIDI_VOL));
 		}
-		if (_panEvents.Count != 0)
+		if (_panEventsOptimized.Count != 0)
 		{
 			FLAutomation a = CreateAuto(saver, "Panpot", FLAutomation.MyType.Panpot, filter, ourChans);
-			foreach (MIDIEvent<ControllerMessage> e in _panEvents)
+			foreach (MIDIEvent<ControllerMessage> e in _panEventsOptimized)
 			{
 				a.AddPoint((uint)e.Ticks, PanpotToAutomation(e.Msg.Value));
 			}
-			saver.AddMIDITrackAuto(a, PanpotToAutomation(64));
+			saver.AddMIDITrackAuto(a, PanpotToAutomation(DEFAULT_MIDI_PAN));
 		}
-		if (_pitchEvents.Count != 0)
+		if (_pitchEventsOptimized.Count != 0)
 		{
 			double unitsPerCent = 8_192d / (saver.Options.PitchBendRange * 100);
 
 			FLAutomation a = CreateAuto(saver, "Pitch", FLAutomation.MyType.Pitch, filter, ourChans);
-			foreach (MIDIEvent<PitchBendMessage> e in _pitchEvents)
+			foreach (MIDIEvent<PitchBendMessage> e in _pitchEventsOptimized)
 			{
 				a.AddPoint((uint)e.Ticks, PitchToAutomation(e.Msg.GetPitchAsInt(), unitsPerCent));
 			}
-			saver.AddMIDITrackAuto(a, PitchToAutomation(0, unitsPerCent));
+			saver.AddMIDITrackAuto(a, PitchToAutomation(DEFAULT_MIDI_PITCH, unitsPerCent));
 		}
-		if (outputInstrumentAutos && _programEvents.Count >= 2)
+		if (outputInstrumentAutos && _programEventsOptimized.Count >= 2)
 		{
 			FLAutomation a = CreateAuto(saver, "Instrument", FLAutomation.MyType.MIDIProgram, filter, ourChans);
-			foreach (MIDIEvent<ProgramChangeMessage> e in _programEvents)
+			foreach (MIDIEvent<ProgramChangeMessage> e in _programEventsOptimized)
 			{
 				a.AddPoint((uint)e.Ticks, ProgramToAutomation(e.Msg.Program));
 			}
-			saver.AddMIDITrackAuto(a, ProgramToAutomation(0));
+			saver.AddMIDITrackAuto(a, ProgramToAutomation(DEFAULT_MIDI_PROGRAM));
 		}
 	}
 	private FLAutomation CreateAuto(FLPSaver saver, string type, FLAutomation.MyType flType, FLChannelFilter filter, List<FLChannel> ourChans)

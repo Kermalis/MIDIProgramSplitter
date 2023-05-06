@@ -15,11 +15,16 @@ internal sealed partial class TrackData
 		public MIDIEvent<NoteOnMessage> NoteOnE;
 	}
 
+	private const byte DEFAULT_MIDI_VOL = 127; // I believe MIDI defaults to max channel volume
+	private const byte DEFAULT_MIDI_PAN = 64; // Center
+	private const int DEFAULT_MIDI_PITCH = 0;
+	private const MIDIProgram DEFAULT_MIDI_PROGRAM = 0;
+
 	private readonly byte _trackIndex;
 	private readonly MIDITrackChunk _inTrack;
 	private readonly byte _trackChannel;
 
-	/// <summary>Each HashSet keeps track of the programs that have NoteOn</summary>
+	/// <summary>Keeps track of the programs that have NoteOn</summary>
 	private readonly HashSet<MIDIProgram> _usedPrograms;
 	/// <summary>Used while iterating the events</summary>
 	private MIDIProgram _curProgram;
@@ -31,6 +36,11 @@ internal sealed partial class TrackData
 	private readonly List<MIDIEvent<ControllerMessage>> _panEvents;
 	private readonly List<MIDIEvent<PitchBendMessage>> _pitchEvents;
 	private readonly List<MIDIEvent<ProgramChangeMessage>> _programEvents;
+
+	private readonly List<MIDIEvent<ControllerMessage>> _volEventsOptimized;
+	private readonly List<MIDIEvent<ControllerMessage>> _panEventsOptimized;
+	private readonly List<MIDIEvent<PitchBendMessage>> _pitchEventsOptimized;
+	private readonly List<MIDIEvent<ProgramChangeMessage>> _programEventsOptimized;
 
 	/// <summary>Scavenges <paramref name="inTrack"/> for events and splits them into new tracks</summary>
 	public TrackData(byte trackIndex, MIDITrackChunk inTrack)
@@ -44,6 +54,10 @@ internal sealed partial class TrackData
 		_panEvents = new List<MIDIEvent<ControllerMessage>>();
 		_pitchEvents = new List<MIDIEvent<PitchBendMessage>>();
 		_programEvents = new List<MIDIEvent<ProgramChangeMessage>>();
+		_volEventsOptimized = new List<MIDIEvent<ControllerMessage>>();
+		_panEventsOptimized = new List<MIDIEvent<ControllerMessage>>();
+		_pitchEventsOptimized = new List<MIDIEvent<PitchBendMessage>>();
+		_programEventsOptimized = new List<MIDIEvent<ProgramChangeMessage>>();
 
 		_trackChannel = GatherTrackInfoFirstPass();
 
@@ -55,6 +69,15 @@ internal sealed partial class TrackData
 	{
 		byte chan = byte.MaxValue;
 
+		// Don't include default values if they're first
+		_curProgram = DEFAULT_MIDI_PROGRAM;
+		MIDIProgram curOptimizedProgram = DEFAULT_MIDI_PROGRAM;
+		byte curVolume = DEFAULT_MIDI_VOL;
+		byte curPan = DEFAULT_MIDI_PAN;
+		int curPitch = DEFAULT_MIDI_PITCH;
+
+		MIDIEvent<ProgramChangeMessage>? pendingProgramChange = null;
+
 		for (IMIDIEvent? ev = _inTrack.First; ev is not null; ev = ev.Next)
 		{
 			switch (ev)
@@ -63,31 +86,68 @@ internal sealed partial class TrackData
 				{
 					CheckChannel(e.Msg, ref chan);
 					_curProgram = e.Msg.Program;
+
 					_programEvents.Add(e);
+					// Don't add these with optimization unless they are used. Example is BrassSection towards the end of HGSS rival
+					pendingProgramChange = e;
 					break;
 				}
 				case MIDIEvent<NoteOnMessage> e:
 				{
 					CheckChannel(e.Msg, ref chan);
-					if (e.Msg.Velocity != 0)
+					// If it's not a NoteOff, add it to the lists
+					if (pendingProgramChange is not null && e.Msg.Velocity != 0)
 					{
-						_usedPrograms.Add(_curProgram);
+						_usedPrograms.Add(_curProgram); // Adds if it's not already present in the hashset
+						if (curOptimizedProgram != _curProgram)
+						{
+							_programEventsOptimized.Add(pendingProgramChange);
+						}
+						curOptimizedProgram = _curProgram;
+						pendingProgramChange = null;
 					}
 					break;
 				}
 				case MIDIEvent<PitchBendMessage> e:
 				{
 					CheckChannel(e.Msg, ref chan);
+					int newPitch = e.Msg.GetPitchAsInt();
+
 					_pitchEvents.Add(e);
+					if (curPitch != newPitch)
+					{
+						_pitchEventsOptimized.Add(e);
+					}
+					curPitch = newPitch;
 					break;
 				}
 				case MIDIEvent<ControllerMessage> e:
 				{
 					CheckChannel(e.Msg, ref chan);
+					byte newVal = e.Msg.Value;
+
 					switch (e.Msg.Controller)
 					{
-						case ControllerType.ChannelVolume: _volEvents.Add(e); break;
-						case ControllerType.Pan: _panEvents.Add(e); break;
+						case ControllerType.ChannelVolume:
+						{
+							_volEvents.Add(e);
+							if (curVolume != newVal)
+							{
+								_volEventsOptimized.Add(e);
+							}
+							curVolume = newVal;
+							break;
+						}
+						case ControllerType.Pan:
+						{
+							_panEvents.Add(e);
+							if (curPan != newVal)
+							{
+								_panEventsOptimized.Add(e);
+							}
+							curPan = newVal;
+							break;
+						}
 					}
 					break;
 				}
@@ -131,8 +191,10 @@ internal sealed partial class TrackData
 			return;
 		}
 
+		// TODO: Option to only use optimized events. Would need to check if the event is in the optimized list
+
 		NewTrackDict ts = _newTracks;
-		_curProgram = 0;
+		_curProgram = DEFAULT_MIDI_PROGRAM;
 		NewTrackPattern? curPattern = null;
 
 		for (IMIDIEvent? e = _inTrack.First; e is not null; e = e.Next)
@@ -156,7 +218,10 @@ internal sealed partial class TrackData
 			case MIDIEvent<ProgramChangeMessage> e:
 			{
 				_curProgram = e.Msg.Program;
-				curPattern = null;
+				if (_programEventsOptimized.Contains(e))
+				{
+					curPattern = null;
+				}
 				if (!ts.VoiceIsUsed(_curProgram))
 				{
 					return false; // Ignore this program change in that case
@@ -180,7 +245,7 @@ internal sealed partial class TrackData
 					{
 						Program = _curProgram,
 						Pat = curPattern,
-						NoteOnE = e
+						NoteOnE = e,
 					});
 
 					ts.InsertEventIntoNewTrack(e, _curProgram);

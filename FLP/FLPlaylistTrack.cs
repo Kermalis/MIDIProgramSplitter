@@ -4,6 +4,11 @@ namespace FLP;
 
 public sealed class FLPlaylistTrack
 {
+	public const float SIZE_MIN = 0f;
+	public const float SIZE_DEFAULT = 1f;
+	public const float SIZE_MAX = 25.9249992370605f;
+	public static FLColor3 DefaultColor => new(72, 81, 86);
+
 	internal readonly ushort Index;
 	internal ushort ID => (ushort)(Index + 1);
 
@@ -18,8 +23,8 @@ public sealed class FLPlaylistTrack
 	internal FLPlaylistTrack(ushort index)
 	{
 		Index = index;
-		Color = new FLColor3(72, 81, 86);
-		Size = 1f;
+		Color = DefaultColor;
+		Size = SIZE_DEFAULT;
 	}
 
 	internal void Write(EndianBinaryWriter w)

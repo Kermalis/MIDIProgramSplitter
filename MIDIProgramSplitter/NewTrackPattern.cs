@@ -25,10 +25,10 @@ internal sealed class NewTrackPattern
 		Notes = new List<Note>();
 	}
 
-	public void AddToFLP(FLPSaver saver, FLChannel channel, FLPlaylistTrack pTrack, string? name)
+	public void AddToFLP(FLPSaver saver, FLChannel channel, FLPlaylistTrack pTrack, MIDIProgram program, string? name)
 	{
 		FLPattern p = saver.FLP.CreatePattern();
-		p.Color = saver.Options.GetPatternColor();
+		p.Color = saver.Options.GetPatternColor(program);
 		p.Name = name;
 
 		uint startTick = (uint)Notes[0].On.Ticks; // TODO: Some quantization?

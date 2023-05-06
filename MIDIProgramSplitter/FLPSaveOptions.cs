@@ -1,4 +1,5 @@
 ﻿using FLP;
+using Kermalis.MIDI;
 using System;
 using System.Linq;
 
@@ -36,15 +37,18 @@ public sealed class FLPSaveOptions
 	public EPatternColorMode PatternColorMode;
 	public EInsertColorMode InsertColorMode;
 	public EAutomationColorMode AutomationColorMode;
+	// TODO: Channel colors
 
 	public FLPSaveOptions()
 	{
 		DLSPath = string.Empty;
-		AutomationTrackSize = 1f / 3;
+		AutomationTrackSize = FLPlaylistTrack.SIZE_MIN;
 		PitchBendRange = 12;
 
 		GroupMIDITrackAutomations = true;
 		CollapseAutomationGroups = true;
+
+		PatternColorMode = EPatternColorMode.Instrument;
 	}
 
 	internal void Validate()
@@ -59,13 +63,13 @@ public sealed class FLPSaveOptions
 		}
 	}
 
-	public FLColor3? GetPatternColor()
+	public FLColor3? GetPatternColor(MIDIProgram program)
 	{
 		switch (PatternColorMode)
 		{
 			case EPatternColorMode.Random: return FLColor3.GetRandom();
+			case EPatternColorMode.Instrument: return FLColor3.FromRGB(MIDIUtils.InstrumentColorsRGB[(int)program]);
 			case EPatternColorMode.Track: // TODO
-			case EPatternColorMode.Instrument: // TODO
 			default: return null;
 		}
 	}

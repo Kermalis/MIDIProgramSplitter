@@ -26,6 +26,13 @@ public struct FLColor3
 	{
 		return new FLColor3((uint)Random.Shared.Next(0x1_000_000));
 	}
+	public static FLColor3 FromRGB(uint rgb)
+	{
+		byte b = (byte)(rgb & 0xFF);
+		byte g = (byte)((rgb >> 8) & 0xFF);
+		byte r = (byte)((rgb >> 16) & 0xFF);
+		return new FLColor3(r, g, b);
+	}
 
 	public uint GetFLValue()
 	{

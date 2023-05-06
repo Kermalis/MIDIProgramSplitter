@@ -29,6 +29,8 @@ internal sealed class FLPSaver
 
 	public void HandleTempo(MIDIEvent<MetaMessage> e)
 	{
+		// Some will come out with .999 or .001 for example, but that's fine. No way to really deal with it automatically
+		// TODO: Remove unnecessary events
 		e.Msg.ReadTempoMessage(out _, out decimal bpm);
 		if (FirstTempo is null)
 		{
@@ -54,6 +56,7 @@ internal sealed class FLPSaver
 	}
 	public void HandleTimeSig(MIDIEvent<MetaMessage> e)
 	{
+		// Keeping all time signature events
 		e.Msg.ReadTimeSignatureMessage(out byte num, out byte denom, out _, out _);
 		if (FirstTimeSig is null)
 		{
