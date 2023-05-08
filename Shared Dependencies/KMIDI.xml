@@ -7,6 +7,9 @@
         <member name="P:Kermalis.MIDI.MIDITrackChunk.NumEvents">
             <summary>Includes the end of track event</summary>
         </member>
+        <member name="M:Kermalis.MIDI.MIDITrackChunk.InsertMessage(System.Int32,Kermalis.MIDI.MIDIMessage)">
+            <summary><inheritdoc cref="M:Kermalis.MIDI.MIDITrackChunk.InsertMessage``1(System.Int32,``0)"/></summary>
+        </member>
         <member name="M:Kermalis.MIDI.MIDITrackChunk.InsertMessage``1(System.Int32,``0)">
             <summary>If there are other events at <paramref name="ticks"/>, <paramref name="msg"/> will be inserted after them.</summary>
         </member>

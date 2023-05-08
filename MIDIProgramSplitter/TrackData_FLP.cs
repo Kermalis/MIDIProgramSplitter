@@ -99,7 +99,7 @@ partial class TrackData
 		if (_volEventsOptimized.Count != 0)
 		{
 			FLAutomation a = CreateAuto(saver, "Volume", FLAutomation.MyType.Volume, filter, ourChans);
-			foreach (MIDIEvent<ControllerMessage> e in _volEventsOptimized)
+			foreach (IMIDIEvent<ControllerMessage> e in _volEventsOptimized)
 			{
 				a.AddPoint((uint)e.Ticks, VolumeToAutomation(e.Msg.Value));
 			}
@@ -108,7 +108,7 @@ partial class TrackData
 		if (_panEventsOptimized.Count != 0)
 		{
 			FLAutomation a = CreateAuto(saver, "Panpot", FLAutomation.MyType.Panpot, filter, ourChans);
-			foreach (MIDIEvent<ControllerMessage> e in _panEventsOptimized)
+			foreach (IMIDIEvent<ControllerMessage> e in _panEventsOptimized)
 			{
 				a.AddPoint((uint)e.Ticks, PanpotToAutomation(e.Msg.Value));
 			}
@@ -119,7 +119,7 @@ partial class TrackData
 			double unitsPerCent = 8_192d / (saver.Options.PitchBendRange * 100);
 
 			FLAutomation a = CreateAuto(saver, "Pitch", FLAutomation.MyType.Pitch, filter, ourChans);
-			foreach (MIDIEvent<PitchBendMessage> e in _pitchEventsOptimized)
+			foreach (IMIDIEvent<PitchBendMessage> e in _pitchEventsOptimized)
 			{
 				a.AddPoint((uint)e.Ticks, PitchToAutomation(e.Msg.GetPitchAsInt(), unitsPerCent));
 			}
@@ -128,7 +128,7 @@ partial class TrackData
 		if (outputInstrumentAutos && _programEventsOptimized.Count >= 2)
 		{
 			FLAutomation a = CreateAuto(saver, "Instrument", FLAutomation.MyType.MIDIProgram, filter, ourChans);
-			foreach (MIDIEvent<ProgramChangeMessage> e in _programEventsOptimized)
+			foreach (IMIDIEvent<ProgramChangeMessage> e in _programEventsOptimized)
 			{
 				a.AddPoint((uint)e.Ticks, ProgramToAutomation(e.Msg.Program));
 			}

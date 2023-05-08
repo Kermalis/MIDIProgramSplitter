@@ -46,7 +46,7 @@ partial class Splitter
 		// TODO: Labels for other text messages?
 		for (IMIDIEvent? ev = _metaTrack.First; ev is not null; ev = ev.Next)
 		{
-			var e = (MIDIEvent<MetaMessage>)ev;
+			var e = (IMIDIEvent<MetaMessage>)ev;
 			switch (e.Msg.Type)
 			{
 				case MetaMessageType.Tempo:

@@ -12,7 +12,7 @@ internal sealed partial class TrackData
 	{
 		public MIDIProgram Program;
 		public NewTrackPattern Pat;
-		public MIDIEvent<NoteOnMessage> NoteOnE;
+		public IMIDIEvent<NoteOnMessage> NoteOnE;
 	}
 
 	private const byte DEFAULT_MIDI_VOL = 127; // I believe MIDI defaults to max channel volume
@@ -32,15 +32,15 @@ internal sealed partial class TrackData
 	/// <summary>The new tracks created</summary>
 	private readonly NewTrackDict? _newTracks; // Allow null I guess since you could be copying automations for later with no notes
 
-	private readonly List<MIDIEvent<ControllerMessage>> _volEvents;
-	private readonly List<MIDIEvent<ControllerMessage>> _panEvents;
-	private readonly List<MIDIEvent<PitchBendMessage>> _pitchEvents;
-	private readonly List<MIDIEvent<ProgramChangeMessage>> _programEvents;
+	private readonly List<IMIDIEvent<ControllerMessage>> _volEvents;
+	private readonly List<IMIDIEvent<ControllerMessage>> _panEvents;
+	private readonly List<IMIDIEvent<PitchBendMessage>> _pitchEvents;
+	private readonly List<IMIDIEvent<ProgramChangeMessage>> _programEvents;
 
-	private readonly List<MIDIEvent<ControllerMessage>> _volEventsOptimized;
-	private readonly List<MIDIEvent<ControllerMessage>> _panEventsOptimized;
-	private readonly List<MIDIEvent<PitchBendMessage>> _pitchEventsOptimized;
-	private readonly List<MIDIEvent<ProgramChangeMessage>> _programEventsOptimized;
+	private readonly List<IMIDIEvent<ControllerMessage>> _volEventsOptimized;
+	private readonly List<IMIDIEvent<ControllerMessage>> _panEventsOptimized;
+	private readonly List<IMIDIEvent<PitchBendMessage>> _pitchEventsOptimized;
+	private readonly List<IMIDIEvent<ProgramChangeMessage>> _programEventsOptimized;
 
 	/// <summary>Scavenges <paramref name="inTrack"/> for events and splits them into new tracks</summary>
 	public TrackData(byte trackIndex, MIDITrackChunk inTrack)
@@ -50,14 +50,14 @@ internal sealed partial class TrackData
 
 		_usedPrograms = new HashSet<MIDIProgram>();
 		_playingNotes = new List<PlayingNote>();
-		_volEvents = new List<MIDIEvent<ControllerMessage>>();
-		_panEvents = new List<MIDIEvent<ControllerMessage>>();
-		_pitchEvents = new List<MIDIEvent<PitchBendMessage>>();
-		_programEvents = new List<MIDIEvent<ProgramChangeMessage>>();
-		_volEventsOptimized = new List<MIDIEvent<ControllerMessage>>();
-		_panEventsOptimized = new List<MIDIEvent<ControllerMessage>>();
-		_pitchEventsOptimized = new List<MIDIEvent<PitchBendMessage>>();
-		_programEventsOptimized = new List<MIDIEvent<ProgramChangeMessage>>();
+		_volEvents = new List<IMIDIEvent<ControllerMessage>>();
+		_panEvents = new List<IMIDIEvent<ControllerMessage>>();
+		_pitchEvents = new List<IMIDIEvent<PitchBendMessage>>();
+		_programEvents = new List<IMIDIEvent<ProgramChangeMessage>>();
+		_volEventsOptimized = new List<IMIDIEvent<ControllerMessage>>();
+		_panEventsOptimized = new List<IMIDIEvent<ControllerMessage>>();
+		_pitchEventsOptimized = new List<IMIDIEvent<PitchBendMessage>>();
+		_programEventsOptimized = new List<IMIDIEvent<ProgramChangeMessage>>();
 
 		_trackChannel = GatherTrackInfoFirstPass();
 
@@ -76,13 +76,13 @@ internal sealed partial class TrackData
 		byte curPan = DEFAULT_MIDI_PAN;
 		int curPitch = DEFAULT_MIDI_PITCH;
 
-		MIDIEvent<ProgramChangeMessage>? pendingProgramChange = null;
+		IMIDIEvent<ProgramChangeMessage>? pendingProgramChange = null;
 
 		for (IMIDIEvent? ev = _inTrack.First; ev is not null; ev = ev.Next)
 		{
 			switch (ev)
 			{
-				case MIDIEvent<ProgramChangeMessage> e:
+				case IMIDIEvent<ProgramChangeMessage> e:
 				{
 					CheckChannel(e.Msg, ref chan);
 					_curProgram = e.Msg.Program;
@@ -92,7 +92,7 @@ internal sealed partial class TrackData
 					pendingProgramChange = e;
 					break;
 				}
-				case MIDIEvent<NoteOnMessage> e:
+				case IMIDIEvent<NoteOnMessage> e:
 				{
 					CheckChannel(e.Msg, ref chan);
 					// If it's not a NoteOff, add it to the lists
@@ -108,7 +108,7 @@ internal sealed partial class TrackData
 					}
 					break;
 				}
-				case MIDIEvent<PitchBendMessage> e:
+				case IMIDIEvent<PitchBendMessage> e:
 				{
 					CheckChannel(e.Msg, ref chan);
 					int newPitch = e.Msg.GetPitchAsInt();
@@ -121,7 +121,7 @@ internal sealed partial class TrackData
 					curPitch = newPitch;
 					break;
 				}
-				case MIDIEvent<ControllerMessage> e:
+				case IMIDIEvent<ControllerMessage> e:
 				{
 					CheckChannel(e.Msg, ref chan);
 					byte newVal = e.Msg.Value;
@@ -215,7 +215,7 @@ internal sealed partial class TrackData
 	{
 		switch (ev)
 		{
-			case MIDIEvent<ProgramChangeMessage> e:
+			case IMIDIEvent<ProgramChangeMessage> e:
 			{
 				_curProgram = e.Msg.Program;
 				if (_programEventsOptimized.Contains(e))
@@ -228,7 +228,7 @@ internal sealed partial class TrackData
 				}
 				break; // Add to all new tracks on this channel
 			}
-			case MIDIEvent<NoteOnMessage> e:
+			case IMIDIEvent<NoteOnMessage> e:
 			{
 				if (e.Msg.Velocity == 0)
 				{
@@ -252,13 +252,13 @@ internal sealed partial class TrackData
 				}
 				return false; // Only add to correct new track
 			}
-			case MIDIEvent<NoteOffMessage> e:
+			case IMIDIEvent<NoteOffMessage> e:
 			{
 				// TODO: NoteOff velocity? It doesn't always match. NoteOn was 111 and NoteOff was 64
 				SplitTrack_StopPlayingNote(e, ts, e.Msg.Note);
 				return false; // Only add to correct new track
 			}
-			case MIDIEvent<MetaMessage> e:
+			case IMIDIEvent<MetaMessage> e:
 			{
 				Console.WriteLine("Track {0}: {1}", _trackIndex, e);
 

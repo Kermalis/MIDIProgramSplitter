@@ -8,13 +8,13 @@ internal sealed class NewTrackPattern
 {
 	public sealed class Note
 	{
-		public MIDIEvent<NoteOnMessage> On;
+		public IMIDIEvent<NoteOnMessage> On;
 		public uint Duration;
 
 		public uint StartTick => (uint)On.Ticks;
 		public uint EndTick => StartTick + Duration;
 
-		public Note(MIDIEvent<NoteOnMessage> on, IMIDIEvent off)
+		public Note(IMIDIEvent<NoteOnMessage> on, IMIDIEvent off)
 		{
 			On = on;
 			Duration = (uint)(off.Ticks - on.Ticks);
@@ -78,7 +78,7 @@ internal sealed class NewTrackPattern
 
 		foreach (Note note in Notes)
 		{
-			MIDIEvent<NoteOnMessage> noteOnE = note.On;
+			IMIDIEvent<NoteOnMessage> noteOnE = note.On;
 			NoteOnMessage noteOn = noteOnE.Msg;
 
 			p.Notes.Add(new FLPatternNote(channel)

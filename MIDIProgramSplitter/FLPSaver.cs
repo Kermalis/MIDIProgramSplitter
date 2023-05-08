@@ -13,10 +13,10 @@ internal sealed class FLPSaver
 	public FLChannelFilter? AutoFilter;
 	public int AutomationTrackIndex;
 
-	public MIDIEvent<MetaMessage>? FirstTempo;
+	public IMIDIEvent<MetaMessage>? FirstTempo;
 	public FLAutomation? TempoAuto;
 
-	public MIDIEvent<MetaMessage>? FirstTimeSig;
+	public IMIDIEvent<MetaMessage>? FirstTimeSig;
 	public bool CreatedFirstTimeSigMarker;
 
 	public bool CurGroupWithAbove;
@@ -27,7 +27,7 @@ internal sealed class FLPSaver
 		Options = o;
 	}
 
-	public void HandleTempo(MIDIEvent<MetaMessage> e)
+	public void HandleTempo(IMIDIEvent<MetaMessage> e)
 	{
 		// Some will come out with .999 or .001 for example, but that's fine. No way to really deal with it automatically
 		// TODO: Remove unnecessary events
@@ -54,7 +54,7 @@ internal sealed class FLPSaver
 		}
 		TempoAuto.AddTempoPoint((uint)e.Ticks, bpm);
 	}
-	public void HandleTimeSig(MIDIEvent<MetaMessage> e)
+	public void HandleTimeSig(IMIDIEvent<MetaMessage> e)
 	{
 		// Keeping all time signature events
 		e.Msg.ReadTimeSignatureMessage(out byte num, out byte denom, out _, out _);
