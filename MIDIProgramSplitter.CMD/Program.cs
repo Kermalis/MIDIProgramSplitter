@@ -53,10 +53,7 @@ internal static class Program
 		{
 			throw new Exception("File not found: \"" + inMIDIFile + '\"');
 		}
-		if (!Path.Exists(outDir))
-		{
-			throw new Exception("Output directory not found: \"" + outDir + '\"');
-		}
+		Directory.CreateDirectory(outDir);
 		string outMIDIFile = Path.Combine(outDir, Path.GetFileName(inMIDIFile));
 
 		MIDIFile inMIDI;
