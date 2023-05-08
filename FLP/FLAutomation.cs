@@ -106,7 +106,7 @@ public sealed partial class FLAutomation
 		PadPoints(targetTicks, FLUtils.LerpUnclamped(10, 522, 0, 1, defaultTempo));
 	}
 
-	internal void Write(EndianBinaryWriter w, uint ppqn)
+	internal void Write(EndianBinaryWriter w, FLVersionCompat verCom, uint ppqn)
 	{
 		FLProjectWriter.Write16BitEvent(w, FLEvent.NewChannel, Index);
 		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelType, (byte)FLChannelType.Automation);
@@ -115,6 +115,12 @@ public sealed partial class FLAutomation
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PluginName, Name + '\0');
 		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginIcon, 0);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginColor, Color.GetFLValue());
+
+		if (verCom == FLVersionCompat.V21_0_3__B3517)
+		{
+			FLProjectWriter.Write8BitEvent(w, FLEvent.Unk_41, 1);
+		}
+
 		// No plugin params
 		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelIsEnabled, 1);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.Delay, FLChannel.Delay);

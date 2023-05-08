@@ -6,6 +6,7 @@ namespace MIDIProgramSplitter;
 
 partial class Splitter
 {
+	// TODO: Preserve midi track names in FLP
 	public void SaveFLP(Stream s, FLPSaveOptions options)
 	{
 		options.Validate();
@@ -42,6 +43,7 @@ partial class Splitter
 
 	private void FLP_AddMetaTrackEvents(FLPSaver saver)
 	{
+		// TODO: Labels for other text messages?
 		for (IMIDIEvent? ev = _metaTrack.First; ev is not null; ev = ev.Next)
 		{
 			var e = (MIDIEvent<MetaMessage>)ev;

@@ -2,6 +2,12 @@
 
 namespace FLP;
 
+public enum FLVersionCompat : byte
+{
+	V20_9_2__B2963,
+	V21_0_3__B3517,
+}
+
 internal enum FLChannelType : byte
 {
 	Sampler,

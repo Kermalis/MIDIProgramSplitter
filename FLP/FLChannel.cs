@@ -98,7 +98,7 @@ public sealed class FLChannel
 		Filter = filter;
 	}
 
-	internal void Write(EndianBinaryWriter w)
+	internal void Write(EndianBinaryWriter w, FLVersionCompat verCom)
 	{
 		FLProjectWriter.Write16BitEvent(w, FLEvent.NewChannel, Index);
 		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelType, (byte)FLChannelType.FLPlugin);
@@ -107,6 +107,12 @@ public sealed class FLChannel
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PluginName, Name + '\0');
 		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginIcon, 0);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginColor, Color.GetFLValue());
+
+		if (verCom == FLVersionCompat.V21_0_3__B3517)
+		{
+			FLProjectWriter.Write8BitEvent(w, FLEvent.Unk_41, 1);
+		}
+
 		FLPluginParams.WriteMIDIOut(w, MIDIChannel, MIDIBank, MIDIProgram);
 		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelIsEnabled, 1);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.Delay, Delay);

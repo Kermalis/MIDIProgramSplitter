@@ -40,7 +40,7 @@ public sealed class FLArrangement
 		PlaylistMarkers.Add(new FLPlaylistMarker(tick, num + "/" + denom, (num, denom)));
 	}
 
-	internal void WriteArrangement(EndianBinaryWriter w)
+	internal void Write(EndianBinaryWriter w, FLVersionCompat verCom)
 	{
 		FLProjectWriter.Write16BitEvent(w, FLEvent.NewArrangement, Index);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PlaylistArrangementName, Name + '\0');
@@ -65,7 +65,7 @@ public sealed class FLArrangement
 		// Playlist Tracks
 		foreach (FLPlaylistTrack track in PlaylistTracks)
 		{
-			track.Write(w);
+			track.Write(w, verCom);
 		}
 	}
 }

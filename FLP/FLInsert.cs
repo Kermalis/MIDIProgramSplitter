@@ -17,12 +17,16 @@ public sealed class FLInsert
 			Color = new FLColor3(72, 81, 86);
 		}
 
-		internal void Write(EndianBinaryWriter w, byte insertIndex)
+		internal void Write(EndianBinaryWriter w, FLVersionCompat verCom, byte insertIndex)
 		{
 			FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "Fruity LSD\0");
 			FLNewPlugin.WriteFruityLSD(w, insertIndex);
 			FLProjectWriter.Write32BitEvent(w, FLEvent.PluginIcon, Icon);
 			FLProjectWriter.Write32BitEvent(w, FLEvent.PluginColor, Color.GetFLValue());
+			if (verCom == FLVersionCompat.V21_0_3__B3517)
+			{
+				FLProjectWriter.Write8BitEvent(w, FLEvent.Unk_41, 0);
+			}
 			FLPluginParams.WriteFruityLSD(w, MIDIBank, DLSPath);
 		}
 	}
@@ -38,7 +42,7 @@ public sealed class FLInsert
 		_index = index;
 	}
 
-	internal void Write(EndianBinaryWriter w)
+	internal void Write(EndianBinaryWriter w, FLVersionCompat verCom)
 	{
 		// These 3 can exist independently of each other unlike patterns
 		if (Color is not null)
@@ -54,10 +58,16 @@ public sealed class FLInsert
 			FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.InsertName, Name + '\0');
 		}
 
+		// TODO: Is Unk_42 before or after Color/Icon/Name?
+		if (verCom == FLVersionCompat.V21_0_3__B3517)
+		{
+			FLProjectWriter.Write8BitEvent(w, FLEvent.Unk_42, 0);
+		}
+
 		bool isMasterOrCurrent = _index is 0 or 126;
 		FLInsertParams.Write(w, isMasterOrCurrent);
 
-		FruityLSD?.Write(w, _index);
+		FruityLSD?.Write(w, verCom, _index);
 
 		FLProjectWriter.Write16BitEvent(w, FLEvent.NewInsertSlot, 0);
 		FLProjectWriter.Write16BitEvent(w, FLEvent.NewInsertSlot, 1);

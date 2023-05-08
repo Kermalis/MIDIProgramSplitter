@@ -27,7 +27,7 @@ public sealed class FLPlaylistTrack
 		Size = SIZE_DEFAULT;
 	}
 
-	internal void Write(EndianBinaryWriter w)
+	internal void Write(EndianBinaryWriter w, FLVersionCompat verCom)
 	{
 		w.WriteEnum(FLEvent.NewPlaylistTrack);
 		FLProjectWriter.WriteArrayEventLength(w, 66);
@@ -91,6 +91,12 @@ public sealed class FLPlaylistTrack
 		if (Name is not null)
 		{
 			FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PlaylistTrackName, Name + '\0');
+		}
+
+		// TODO: Is Unk_43 before or after Name?
+		if (verCom == FLVersionCompat.V21_0_3__B3517)
+		{
+			FLProjectWriter.Write8BitEvent(w, FLEvent.Unk_43, 0);
 		}
 	}
 }

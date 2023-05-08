@@ -27,6 +27,8 @@ public sealed class FLPSaveOptions
 		Track, // TODO
 	}
 
+	public FLVersionCompat FLVersionCompat;
+
 	public string DLSPath;
 	public float AutomationTrackSize;
 	public int PitchBendRange;
@@ -43,6 +45,8 @@ public sealed class FLPSaveOptions
 
 	public FLPSaveOptions()
 	{
+		FLVersionCompat = FLVersionCompat.V20_9_2__B2963;
+
 		DLSPath = string.Empty;
 		AutomationTrackSize = FLPlaylistTrack.SIZE_MIN;
 		PitchBendRange = 12;
@@ -53,6 +57,8 @@ public sealed class FLPSaveOptions
 		//AppendInstrumentNamesToPatterns = true;
 
 		PatternColorMode = EPatternColorMode.Instrument;
+		InsertColorMode = EInsertColorMode.None;
+		AutomationColorMode = EAutomationColorMode.None;
 	}
 
 	internal void Validate()

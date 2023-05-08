@@ -49,6 +49,7 @@ public sealed class FLProjectWriter
 	public readonly List<FLAutomation> Automations;
 	public readonly List<FLPattern> Patterns;
 	public readonly List<FLArrangement> Arrangements;
+	public FLVersionCompat VersionCompat;
 	public ushort PPQN;
 	public decimal CurrentTempo;
 	public byte TimeSigNumerator;
@@ -181,7 +182,7 @@ public sealed class FLProjectWriter
 		WriteChannels(w);
 		foreach (FLArrangement a in Arrangements)
 		{
-			a.WriteArrangement(w);
+			a.Write(w, VersionCompat);
 		}
 		WriteMoreStuffIDK(w);
 		WriteMixer(w);
@@ -239,11 +240,8 @@ public sealed class FLProjectWriter
 
 	private void WriteProjectInfo(EndianBinaryWriter w)
 	{
-		WriteUTF8EventWithLength(w, FLEvent.Version, "20.9.2.2963\0");
-		Write32BitEvent(w, FLEvent.VersionBuildNumber, 2963);
-		Write8BitEvent(w, FLEvent.IsRegistered, 1); // TODO: Probably should make it 0 to avoid legal trouble? How does it authenticate this?
-		Write8BitEvent(w, FLEvent.Unk_37, 1); // Authentication related too?
-		WriteUTF16EventWithLength(w, FLEvent.RegistrationID, "d3@?4xufs49p1n?B>;?889\0"); // Probably shouldn't include this?
+		WriteVersion(w);
+		WriteRegistration(w);
 
 		Write32BitEvent(w, FLEvent.FineTempo, (uint)(CurrentTempo * 1_000));
 		Write16BitEvent(w, FLEvent.SelectedPatternNum, 1);
@@ -254,6 +252,10 @@ public sealed class FLProjectWriter
 		Write8BitEvent(w, FLEvent.ProjectTimeSigDenominator, TimeSigDenominator);
 		Write8BitEvent(w, FLEvent.ProjectShouldUseTimeSignatures, 1);
 		Write8BitEvent(w, FLEvent.PanningLaw, 0); // Circular
+		if (VersionCompat == FLVersionCompat.V21_0_3__B3517)
+		{
+			Write8BitEvent(w, FLEvent.PlaylistShouldUseAutoCrossfades, 0);
+		}
 		Write8BitEvent(w, FLEvent.ShouldPlayTruncatedClipNotes, 1);
 		Write8BitEvent(w, FLEvent.ShouldShowInfoOnOpen, 0);
 		WriteUTF16EventWithLength(w, FLEvent.ProjectTitle, "\0");
@@ -284,6 +286,71 @@ public sealed class FLProjectWriter
 		WriteArrayEventWithLength(w, FLEvent.MIDIInfo, MIDIInfo1);
 		WriteArrayEventWithLength(w, FLEvent.MIDIInfo, MIDIInfo2);
 	}
+	private void WriteVersion(EndianBinaryWriter w)
+	{
+		string v;
+		uint b;
+
+		switch (VersionCompat)
+		{
+			case FLVersionCompat.V20_9_2__B2963:
+			{
+				v = "20.9.2.2963";
+				b = 2963;
+				break;
+			}
+			case FLVersionCompat.V21_0_3__B3517:
+			{
+				v = "21.0.3.3517";
+				b = 3517;
+				break;
+			}
+			default: throw new InvalidOperationException("Invalid FL Version compatibility: " + VersionCompat);
+		}
+
+		WriteUTF8EventWithLength(w, FLEvent.Version, v + '\0');
+		Write32BitEvent(w, FLEvent.VersionBuildNumber, b);
+	}
+	private static void WriteRegistration(EndianBinaryWriter w)
+	{
+		// When you save a project in FL Studio, the entire file becomes obfuscated if IsRegistered is 0 (trial mode).
+		// Specifically, every 8bit/16bit/32bit event becomes obfuscated. The other array data is left alone (from the small glimpse I had), and it makes sense to leave it.
+		// For example, the Unk_37 byte here became 76 instead of 1 in FL21. I didn't try different projects or FL versions, but if I had to guess, it is probably randomized and seeds the obfuscation.
+		// Every other event also became obfuscated in some way that I couldn't quickly decipher with Windows calculator since it seems to mix the current position and eventID with the seed.
+		// Examples:
+		// ================
+		// Byte: IsSongMode = 1 | IsSongMode = 62 (0x3E)
+		// Byte: Shuffle = 0 | Shuffle = 61 (0x3D)
+		// Byte: ProjectShouldUseTimeSignatures = 1 | ProjectShouldUseTimeSignatures = 53 (0x35)
+		// Byte: PanningLaw = 0 | PanningLaw = 50 (0x32)
+		// ================
+		// Word: MasterPitch = 0 | MasterPitch = 15931 (0x3E3B)
+		// Word: NewPattern = 1 | NewPattern = 8220 (0x201C)
+		// Word: NewPattern = 2 | NewPattern = 6677 (0x1A15)
+		// ================
+		// DWord: FineTempo = 185000 | FineTempo = 1347393775 (0x504F98EF)
+		// DWord: CurFilterNum = 0 | CurFilterNum = 757737252 (0x2D2A2724)
+
+		// I can only imagine that trying to decipher this is trouble waiting to happen, so I won't try to.
+		// They clearly want to obfuscate trial projects in a proprietary way, in order to prevent people from using FL in a trial and then using the project files with other software.
+		// Reverse-engineering is protected by law in the USA (where I live), but Image-Line can make it against their TOS to try to decipher trial mode projects. They probably have, but I didn't check.
+		// If you ever manage to reverse-engineer their method, they will 100% just change it to a new one, then you can't support new versions lol
+
+		// They probably don't obfuscate the registered projects since it'd defeat the purpose of buying FL if you were trying to do something outside of it (like this).
+		// If paying wouldn't make the project easier to parse, and you could defeat the obfuscation algorithm, you'd remain on the trial version or pirate it which is against Image-Line's interests.
+
+		// Anyway, FL seems to be fine when reading projects that are in trial mode, even if they have no obfuscation. I assume this is due to the Unk_37 byte here still being 1 instead of 76.
+		// So I am writing unregistered projects with no obfuscation. Thanks Image-Line for making this possible :)
+
+		// I put my registration ID there as a reference to what it might look like.
+		// I assume this is nothing to worry about since that would be so easy to find if you open a project I share. I've also seen other parsing projects show theirs.
+
+		// Hopefully you enjoyed reading this part
+
+		Write8BitEvent(w, FLEvent.IsRegistered, 0); // 1 if registered
+		Write8BitEvent(w, FLEvent.Unk_37, 1); // Obfuscation-related?
+		WriteUTF16EventWithLength(w, FLEvent.RegistrationID, "\0"); // Mine is "d3@?4xufs49p1n?B>;?889\0" in FL20 and FL21
+	}
 	private void WriteChannels(EndianBinaryWriter w)
 	{
 		foreach (FLAutomation a in Automations)
@@ -293,7 +360,7 @@ public sealed class FLProjectWriter
 
 		foreach (FLChannel c in Channels)
 		{
-			c.Write(w);
+			c.Write(w, VersionCompat);
 		}
 		// For some reason, pattern colors go between
 		foreach (FLPattern p in Patterns)
@@ -303,7 +370,7 @@ public sealed class FLProjectWriter
 		//
 		foreach (FLAutomation a in Automations)
 		{
-			a.Write(w, PPQN);
+			a.Write(w, VersionCompat, PPQN);
 		}
 	}
 	private void WriteMoreStuffIDK(EndianBinaryWriter w)
@@ -319,11 +386,11 @@ public sealed class FLProjectWriter
 	{
 		foreach (FLInsert i in Inserts)
 		{
-			i.Write(w);
+			i.Write(w, VersionCompat);
 		}
 
 		FLMixerParams.Write(w);
 
-		Write32BitEvent(w, FLEvent.WindowH, 1286); // WindowH for what? Piano roll? Mixer?
+		Write32BitEvent(w, FLEvent.WindowH, 1286); // TODO: WindowH for what? Piano roll? Mixer?
 	}
 }
