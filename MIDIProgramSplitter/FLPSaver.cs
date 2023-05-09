@@ -44,13 +44,9 @@ internal sealed class FLPSaver
 		{
 			AutoFilter ??= FLP.CreateAutomationFilter();
 			TempoAuto = FLP.CreateTempoAutomation("Tempo", AutoFilter);
-
-			FLArrangement arrang = FLP.Arrangements[0];
-			FLPlaylistTrack track = arrang.PlaylistTracks[AutomationTrackIndex++];
-			track.Size = Options.AutomationTrackSize;
-			arrang.AddToPlaylist(TempoAuto, 0, MaxTicks, track);
-
 			TempoAuto.AddTempoPoint((uint)FirstTempo.Ticks, FLP.CurrentTempo);
+
+			AddAutomationToPlaylist(TempoAuto);
 		}
 		TempoAuto.AddTempoPoint((uint)e.Ticks, bpm);
 	}
@@ -81,29 +77,33 @@ internal sealed class FLPSaver
 	{
 		a.PadPoints(MaxTicks, defaultVal);
 
+		AddAutomationToPlaylist(a);
+	}
+
+	private void AddAutomationToPlaylist(FLAutomation a)
+	{
 		FLArrangement arrang = FLP.Arrangements[0];
 		FLPlaylistTrack track = arrang.PlaylistTracks[AutomationTrackIndex];
 		arrang.AddToPlaylist(a, 0, MaxTicks, track);
 
 		track.Size = Options.AutomationTrackSize;
 
-		if (Options.GroupMIDITrackAutomations)
+		if (Options.AutomationGrouping != FLPSaveOptions.AutomationGroupMode.None)
 		{
 			track.GroupWithAbove = CurGroupWithAbove;
 
 			if (CurGroupWithAbove && Options.CollapseAutomationGroups)
 			{
-				// Parent of the group
+				// Try to collapse the group's parent
 				FLPlaylistTrack prev = arrang.PlaylistTracks[AutomationTrackIndex - 1];
 				if (!prev.GroupWithAbove)
 				{
 					prev.IsGroupCollapsed = true;
 				}
 			}
-
-			CurGroupWithAbove = true;
 		}
 
+		CurGroupWithAbove = true; // Next automation is viable for being grouped
 		AutomationTrackIndex++;
 	}
 }

@@ -10,6 +10,8 @@ internal static class Program
 	private static void Main(string[] args)
 	{
 		const string OUTFLP = @"C:\Users\Kermalis\Documents\Development\GitHub\MIDIProgramSplitter\TestOUT.flp";
+		//const byte DEFAULT_MIDI_VOL = 100; // MP2K, but the VGMS ripped ones scale back up to 127
+		const byte DEFAULT_MIDI_VOL = 127; // SDAT/MIDI
 
 		//Test_ReadFLP(); return;
 
@@ -62,7 +64,7 @@ internal static class Program
 			inMIDI = new MIDIFile(fs);
 		}
 
-		var splitter = new Splitter(inMIDI);
+		var splitter = new Splitter(inMIDI, DEFAULT_MIDI_VOL);
 		using (FileStream fs = File.Create(outMIDIFile))
 		{
 			splitter.SaveMIDI(fs);
@@ -73,6 +75,7 @@ internal static class Program
 			var options = new FLPSaveOptions
 			{
 				DLSPath = dlsPath,
+				DefaultMIDIVolume = DEFAULT_MIDI_VOL,
 			};
 			splitter.SaveFLP(fs, options);
 		}

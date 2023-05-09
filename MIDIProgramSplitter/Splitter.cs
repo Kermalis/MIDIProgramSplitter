@@ -12,7 +12,7 @@ public sealed partial class Splitter
 	private readonly MIDITrackChunk _metaTrack;
 	private readonly List<TrackData> _splitTracks;
 
-	public Splitter(MIDIFile m)
+	public Splitter(MIDIFile m, byte defaultMIDIVol)
 	{
 		_inMIDI = m;
 		_metaTrack = null!;
@@ -65,7 +65,7 @@ public sealed partial class Splitter
 			}
 			else
 			{
-				var td = new TrackData(trackIndex, track);
+				var td = new TrackData(trackIndex, track, defaultMIDIVol);
 				td.SplitTrack();
 				_splitTracks.Add(td);
 			}

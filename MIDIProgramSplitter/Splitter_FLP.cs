@@ -23,7 +23,7 @@ partial class Splitter
 		{
 			FLInsert ins = saver.FLP.Inserts[i + 1]; // Skip master insert
 			ins.Color = saver.Options.GetInsertColor();
-			ins.Name = string.Format("T{0:D2}", i + 2); // Skip meta track
+			ins.Name = string.Format("T{0:D2}", i + 1); // Skip meta track
 			ins.FruityLSD = new FLInsert.FLFruityLSDOptions
 			{
 				DLSPath = options.DLSPath,
@@ -43,7 +43,7 @@ partial class Splitter
 
 	private void FLP_AddMetaTrackEvents(FLPSaver saver)
 	{
-		// TODO: Labels for other text messages?
+		// TODO: Markers for other text messages?
 		for (IMIDIEvent? ev = _metaTrack.First; ev is not null; ev = ev.Next)
 		{
 			var e = (IMIDIEvent<MetaMessage>)ev;

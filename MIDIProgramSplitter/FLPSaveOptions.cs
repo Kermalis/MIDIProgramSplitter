@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace MIDIProgramSplitter;
 
+// TODO: Option to open FL project after export
 public sealed class FLPSaveOptions
 {
 	public enum EPatternColorMode : byte
@@ -26,14 +27,22 @@ public sealed class FLPSaveOptions
 		Random,
 		Track, // TODO
 	}
+	public enum AutomationGroupMode : byte
+	{
+		None,
+		GroupByChannel,
+		GroupAll,
+	}
 
 	public FLVersionCompat FLVersionCompat;
 
 	public string DLSPath;
 	public float AutomationTrackSize;
-	public int PitchBendRange;
 
-	public bool GroupMIDITrackAutomations;
+	public int PitchBendRange;
+	public byte DefaultMIDIVolume;
+
+	public AutomationGroupMode AutomationGrouping;
 	public bool CollapseAutomationGroups;
 
 	public bool AppendInstrumentNamesToPatterns;
@@ -49,9 +58,11 @@ public sealed class FLPSaveOptions
 
 		DLSPath = string.Empty;
 		AutomationTrackSize = FLPlaylistTrack.SIZE_MIN;
-		PitchBendRange = 12;
 
-		GroupMIDITrackAutomations = true;
+		PitchBendRange = 12;
+		DefaultMIDIVolume = 127; // SDAT 127, MP2K 100. I believe MIDI defaults to 127
+
+		AutomationGrouping = AutomationGroupMode.GroupAll;
 		CollapseAutomationGroups = true;
 
 		//AppendInstrumentNamesToPatterns = true;

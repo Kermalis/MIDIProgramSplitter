@@ -15,7 +15,6 @@ internal sealed partial class TrackData
 		public IMIDIEvent<NoteOnMessage> NoteOnE;
 	}
 
-	private const byte DEFAULT_MIDI_VOL = 127; // I believe MIDI defaults to max channel volume
 	private const byte DEFAULT_MIDI_PAN = 64; // Center
 	private const int DEFAULT_MIDI_PITCH = 0;
 	private const MIDIProgram DEFAULT_MIDI_PROGRAM = 0;
@@ -43,7 +42,7 @@ internal sealed partial class TrackData
 	private readonly List<IMIDIEvent<ProgramChangeMessage>> _programEventsOptimized;
 
 	/// <summary>Scavenges <paramref name="inTrack"/> for events and splits them into new tracks</summary>
-	public TrackData(byte trackIndex, MIDITrackChunk inTrack)
+	public TrackData(byte trackIndex, MIDITrackChunk inTrack, byte defaultMIDIVol)
 	{
 		_trackIndex = trackIndex;
 		_inTrack = inTrack;
@@ -59,20 +58,23 @@ internal sealed partial class TrackData
 		_pitchEventsOptimized = new List<IMIDIEvent<PitchBendMessage>>();
 		_programEventsOptimized = new List<IMIDIEvent<ProgramChangeMessage>>();
 
-		_trackChannel = GatherTrackInfoFirstPass();
+		_trackChannel = GatherTrackInfoFirstPass(defaultMIDIVol);
 
 		_newTracks = _usedPrograms.Count == 0 ? null : new NewTrackDict(trackIndex, _trackChannel, _usedPrograms);
 	}
 
 	/// <summary>Program changes with no NoteOn are not recorded.</summary>
-	private byte GatherTrackInfoFirstPass()
+	private byte GatherTrackInfoFirstPass(byte defaultMIDIVol)
 	{
+		Console.WriteLine();
+		Console.WriteLine("Beginning first pass on Track {0}...", _trackIndex);
+
 		byte chan = byte.MaxValue;
 
 		// Don't include default values if they're first
 		_curProgram = DEFAULT_MIDI_PROGRAM;
 		MIDIProgram curOptimizedProgram = DEFAULT_MIDI_PROGRAM;
-		byte curVolume = DEFAULT_MIDI_VOL;
+		byte curVolume = defaultMIDIVol;
 		byte curPan = DEFAULT_MIDI_PAN;
 		int curPitch = DEFAULT_MIDI_PITCH;
 
@@ -161,6 +163,12 @@ internal sealed partial class TrackData
 					break;
 				}
 			}
+
+			// Check for a program change after a NoteOn in the same tick
+			if (ev.Msg is ProgramChangeMessage)
+			{
+				CheckProgramChangeWarning(ev);
+			}
 		}
 
 		if (chan == byte.MaxValue)
@@ -168,7 +176,22 @@ internal sealed partial class TrackData
 			// TODO: Allow, but skip track
 			throw new InvalidDataException($"Track {_trackIndex} had no MIDI channel events...");
 		}
+		Console.WriteLine("Track {0} detected with channel {1}!", _trackIndex, chan);
 		return chan;
+	}
+	private static void CheckProgramChangeWarning(IMIDIEvent ev)
+	{
+		for (IMIDIEvent? prev = ev.Prev; prev is not null; prev = prev.Prev)
+		{
+			if (prev.Ticks != ev.Ticks)
+			{
+				return;
+			}
+			if (prev.Msg is NoteOnMessage n)
+			{
+				Console.WriteLine("Warning: Two events at the same tick: @{2} = ({0}) & ({1})", n, ev.Msg, ev.Ticks);
+			}
+		}
 	}
 	private void CheckChannel(IMIDIChannelMessage m, ref byte chan)
 	{
