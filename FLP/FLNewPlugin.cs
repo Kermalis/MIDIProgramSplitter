@@ -15,13 +15,13 @@ internal struct FLNewPlugin
 		w.WriteUInt32(0);
 		w.WriteUInt32(2);
 		w.WriteUInt32(0);
-		w.WriteUInt32(0b1_0101_0100); // 0x154 (340)
+		w.WriteUInt32(0b1_0101_0100); // 0x154 (340) = That 1 at the left seems to be "is open"? But these are closed...
 		w.WriteUInt32(0);
 		w.WriteUInt32(0);
 		w.WriteUInt32(0);
 		w.WriteUInt32(0);
-		w.WriteUInt32(4); // Selection/pos related. Was 0x0112 when selected, then 0x0004 when deselected in the same pos.
-		w.WriteUInt32(4);
+		w.WriteUInt32(4); // Selection/pos related. Was 0x0112 when selected, then 0x0004 when deselected in the same pos. Also saw it 0x12B
+		w.WriteUInt32(4); // Saw 0x15D
 		w.WriteUInt32(0);
 		w.WriteUInt32(0);
 	}

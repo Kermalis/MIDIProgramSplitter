@@ -87,6 +87,11 @@ public sealed class FLChannel
 	public byte MIDIBank;
 	public MIDIProgram MIDIProgram;
 	public FLChannelFilter Filter;
+	public uint PanKnob;
+	public uint VolKnob;
+	/// <summary>In cents</summary>
+	public int PitchKnob;
+	public int PitchBendRange;
 
 	internal FLChannel(string name, byte midiChan, byte midiBank, MIDIProgram midiProgram, FLChannelFilter filter)
 	{
@@ -96,6 +101,10 @@ public sealed class FLChannel
 		MIDIBank = midiBank;
 		MIDIProgram = midiProgram;
 		Filter = filter;
+		PanKnob = FLBasicChannelParams.DEFAULT_PAN;
+		VolKnob = FLBasicChannelParams.DEFAULT_VOL;
+		PitchKnob = 0;
+		PitchBendRange = 2;
 	}
 
 	internal void Write(EndianBinaryWriter w, FLVersionCompat verCom)
@@ -131,10 +140,10 @@ public sealed class FLChannel
 		FLProjectWriter.Write32BitEvent(w, FLEvent.FXSine, 0x800_000);
 		FLProjectWriter.Write16BitEvent(w, FLEvent.Fade_Stereo, (ushort)FLFadeStereo.None);
 		FLProjectWriter.Write8BitEvent(w, FLEvent.TargetFXTrack, 0);
-		FLBasicChannelParams.WriteChannel(w);
+		FLBasicChannelParams.WriteChannel(w, PanKnob, VolKnob, PitchKnob);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChanOfsLevels, ChanOfsLevels);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChanPoly, ChanPoly);
-		FLChannelParams.WriteMIDIOut(w, Index);
+		FLChannelParams.WriteMIDIOut(w, Index, PitchBendRange);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.CutCutBy, (uint)(Index + 1) * 0x10_001u);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.ChannelLayerFlags, 0);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.ChanFilterNum, Filter.Index);

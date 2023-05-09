@@ -121,7 +121,7 @@ internal enum FLEvent : byte
 	ChannelLayerFlags,
 	ChanFilterNum,
 	CurFilterNum,
-	/// <summary>Insert track output channel - 0xFFFFFFFF for none</summary>
+	/// <summary>Insert track output channel - -1 for none</summary>
 	InsertOutChanNum,
 	/// <summary>+ Time and Mode in higher bits</summary>
 	NewTimeMarker,
@@ -130,13 +130,12 @@ internal enum FLEvent : byte
 	PatternAutoMode,
 	SongLoopPos,
 	AUSmpRate,
-	/// <summary>Insert track input channel - 0xFFFFFFFF for none</summary>
+	/// <summary>Insert track input channel - -1 for none</summary>
 	InsertInChanNum,
 	PluginIcon,
-	/// <summary>Value like 0xC0D40100</summary>
 	FineTempo,
-	Unk_157, // 0xFFFFFFFF
-	Unk_158, // 0xFFFFFFFF
+	Unk_157, // -1
+	Unk_158, // -1
 	VersionBuildNumber,
 	Unk_164 = 164, // 0
 	Unk_165, // 3

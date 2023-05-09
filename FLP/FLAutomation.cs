@@ -37,6 +37,7 @@ public sealed partial class FLAutomation
 	public readonly List<FLChannel>? Targets;
 	public readonly List<Point> Points;
 	public FLChannelFilter Filter;
+	public int PitchBendOrTimeRange;
 
 	internal FLAutomation(string name, MyType type, List<FLChannel>? targets, FLChannelFilter filter)
 	{
@@ -46,6 +47,7 @@ public sealed partial class FLAutomation
 		Targets = targets;
 		Points = new List<Point>();
 		Filter = filter;
+		PitchBendOrTimeRange = 2;
 	}
 
 	public static FLColor3 GetColor(MyType type)
@@ -142,7 +144,7 @@ public sealed partial class FLAutomation
 		FLBasicChannelParams.WriteAutomation(w);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChanOfsLevels, FLChannel.ChanOfsLevels);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.ChanPoly, ChanPoly);
-		FLChannelParams.WriteAutomation(w);
+		FLChannelParams.WriteAutomation(w, PitchBendOrTimeRange);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.CutCutBy, 0);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.ChannelLayerFlags, 0);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.ChanFilterNum, Filter.Index);

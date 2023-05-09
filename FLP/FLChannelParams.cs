@@ -4,16 +4,16 @@ namespace FLP;
 
 internal struct FLChannelParams
 {
-	public static void WriteMIDIOut(EndianBinaryWriter w, ushort chanIndex)
+	public static void WriteMIDIOut(EndianBinaryWriter w, ushort chanIndex, int pitchBendRange)
 	{
-		Write(w, 1, (byte)chanIndex);
+		Write(w, 1, (byte)chanIndex, pitchBendRange);
 	}
-	public static void WriteAutomation(EndianBinaryWriter w)
+	public static void WriteAutomation(EndianBinaryWriter w, int pitchBendOrTimeRange)
 	{
-		Write(w, 0, 1);
+		Write(w, 0, 1, pitchBendOrTimeRange);
 	}
 
-	private static void Write(EndianBinaryWriter w, byte typeProbably, byte someID)
+	private static void Write(EndianBinaryWriter w, byte typeProbably, byte someID, int pitchBendRange)
 	{
 		w.WriteEnum(FLEvent.ChannelParams);
 		FLProjectWriter.WriteArrayEventLength(w, 168);
@@ -55,7 +55,7 @@ internal struct FLChannelParams
 		w.WriteInt32(0);
 		w.WriteInt32(0);
 		w.WriteInt32(0);
-		w.WriteInt32(2);
+		w.WriteInt32(pitchBendRange);
 		w.WriteInt32(-2);
 		w.WriteInt32(-1);
 		w.WriteInt32(0);
