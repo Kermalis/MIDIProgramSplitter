@@ -29,6 +29,19 @@ public sealed class FLPlaylistTrack
 
 	internal void Write(EndianBinaryWriter w, FLVersionCompat verCom)
 	{
+		WriteNewPlaylistTrack(w);
+		if (verCom == FLVersionCompat.V21_0_3__B3517)
+		{
+			byte val = (byte)(Color.Equals(DefaultColor) ? 0 : 1);
+			FLProjectWriter.Write8BitEvent(w, FLEvent.PlaylistTrackIgnoresTheme, val);
+		}
+		if (Name is not null)
+		{
+			FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PlaylistTrackName, Name + '\0');
+		}
+	}
+	private void WriteNewPlaylistTrack(EndianBinaryWriter w)
+	{
 		w.WriteEnum(FLEvent.NewPlaylistTrack);
 		FLProjectWriter.WriteArrayEventLength(w, 66);
 
@@ -87,15 +100,5 @@ public sealed class FLPlaylistTrack
 		w.WriteBoolean(!IsGroupCollapsed);
 
 		w.WriteInt32(0); // Track Mode Instrument Track Options
-
-		if (verCom == FLVersionCompat.V21_0_3__B3517)
-		{
-			byte val = (byte)(Color.Equals(DefaultColor) ? 0 : 1);
-			FLProjectWriter.Write8BitEvent(w, FLEvent.PlaylistTrackIgnoresTheme, val);
-		}
-		if (Name is not null)
-		{
-			FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PlaylistTrackName, Name + '\0');
-		}
 	}
 }
