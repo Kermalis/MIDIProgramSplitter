@@ -49,7 +49,7 @@ public sealed class FLPlaylistTrack
 		// If I "Lock to this size", this becomes 0x38 (56) instead of -16 or -1
 		// If I manually resize it, this becomes -56 and Size (above) changes
 		// Even if I reset the size to 100%, this stays -56 instead of going back to the weird value
-		w.WriteInt32(Index <= 0x20 ? -16 : -1); // TODO: Why? 
+		w.WriteInt32(Index <= 0x20 ? -16 : -1); // TODO: Why?
 
 		w.WriteByte(0);
 		w.WriteByte(0); // Performance Motion
@@ -88,15 +88,14 @@ public sealed class FLPlaylistTrack
 
 		w.WriteInt32(0); // Track Mode Instrument Track Options
 
+		if (verCom == FLVersionCompat.V21_0_3__B3517)
+		{
+			byte val = (byte)(Color.Equals(DefaultColor) ? 0 : 1);
+			FLProjectWriter.Write8BitEvent(w, FLEvent.PlaylistTrackIgnoresTheme, val);
+		}
 		if (Name is not null)
 		{
 			FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PlaylistTrackName, Name + '\0');
-		}
-
-		// TODO: Is Unk_43 before or after Name?
-		if (verCom == FLVersionCompat.V21_0_3__B3517)
-		{
-			FLProjectWriter.Write8BitEvent(w, FLEvent.Unk_43, 0);
 		}
 	}
 }

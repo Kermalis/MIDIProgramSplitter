@@ -24,11 +24,7 @@ partial class Splitter
 			FLInsert ins = saver.FLP.Inserts[i + 1]; // Skip master insert
 			ins.Color = saver.Options.GetInsertColor();
 			ins.Name = string.Format("T{0:D2}", i + 1); // Skip meta track
-			ins.FruityLSD = new FLInsert.FLFruityLSDOptions
-			{
-				DLSPath = options.DLSPath,
-				MIDIBank = (byte)i,
-			};
+			ins.FruityLSD = new FLInsert.FLFruityLSDOptions((byte)i, options.DLSPath, FLInsert.FLFruityLSDOptions.GetDefaultColor(options.FLVersionCompat));
 		}
 
 		FLP_AddMetaTrackEvents(saver);

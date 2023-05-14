@@ -5,16 +5,19 @@ namespace FLP;
 
 public sealed class FLPattern
 {
+	public static FLColor3 DefaultColor => new(72, 81, 86);
+
 	internal ushort Index;
 	internal ushort ID => (ushort)(Index + 1);
 
 	public readonly List<FLPatternNote> Notes;
-	public FLColor3? Color;
+	public FLColor3 Color;
 	public string? Name;
 
 	internal FLPattern()
 	{
 		Notes = new List<FLPatternNote>();
+		Color = DefaultColor;
 	}
 
 	internal void WritePatternNotes(EndianBinaryWriter w)
@@ -33,7 +36,9 @@ public sealed class FLPattern
 	}
 	internal void WriteColorAndNameIfNecessary(EndianBinaryWriter w)
 	{
-		if (Name is null && Color is null)
+		// If you supply a name, you must supply a color
+		// But a color can be here with no name
+		if (Name is null && Color.Equals(DefaultColor))
 		{
 			return;
 		}
@@ -43,13 +48,8 @@ public sealed class FLPattern
 		if (Name is not null)
 		{
 			FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PatternName, Name + '\0');
-			// If you supply a name, you must supply a color
-			Color ??= new FLColor3(72, 81, 86);
 		}
-		if (Color is not null)
-		{
-			FLProjectWriter.Write32BitEvent(w, FLEvent.PatternColor, Color.Value.GetFLValue());
-		}
+		FLProjectWriter.Write32BitEvent(w, FLEvent.PatternColor, Color.GetFLValue());
 
 		// Dunno what these are, but they are always these 3 values no matter what I touch in the color picker.
 		// Patterns don't have icons, and the preset name/colors don't affect it, so idk

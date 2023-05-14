@@ -84,23 +84,23 @@ public sealed class FLPSaveOptions
 		}
 	}
 
-	public FLColor3? GetPatternColor(MIDIProgram program)
+	public FLColor3 GetPatternColor(MIDIProgram program)
 	{
 		switch (PatternColorMode)
 		{
 			case EPatternColorMode.Random: return FLColor3.GetRandom();
 			case EPatternColorMode.Instrument: return FLColor3.FromRGB(MIDIUtils.InstrumentColorsRGB[(int)program]);
 			case EPatternColorMode.Track: // TODO
-			default: return null;
+			default: return FLPattern.DefaultColor;
 		}
 	}
-	public FLColor3? GetInsertColor()
+	public FLColor3 GetInsertColor()
 	{
 		switch (InsertColorMode)
 		{
 			case EInsertColorMode.Random: return FLColor3.GetRandom();
 			case EInsertColorMode.Track: // TODO
-			default: return null;
+			default: return FLInsert.DefaultColor;
 		}
 	}
 	public FLColor3 GetAutomationColor(FLAutomation.MyType type)
@@ -109,7 +109,7 @@ public sealed class FLPSaveOptions
 		{
 			case EAutomationColorMode.Random: return FLColor3.GetRandom();
 			case EAutomationColorMode.Track: // TODO
-			default: return FLAutomation.GetColor(type);
+			default: return FLAutomation.GetDefaultColor(type);
 		}
 	}
 }

@@ -39,6 +39,11 @@ public struct FLColor3
 		return R | ((uint)G << 8) | ((uint)B << 16);
 	}
 
+	public bool Equals(FLColor3 other)
+	{
+		return R == other.R && G == other.G && B == other.B;
+	}
+
 	public override string ToString()
 	{
 		return string.Format("R {0} G {1} B {2}", R, G, B);

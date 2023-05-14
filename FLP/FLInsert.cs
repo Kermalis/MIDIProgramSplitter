@@ -1,4 +1,5 @@
 ﻿using Kermalis.EndianBinaryIO;
+using System;
 
 namespace FLP;
 
@@ -11,10 +12,21 @@ public sealed class FLInsert
 		public uint Icon;
 		public FLColor3 Color;
 
-		public FLFruityLSDOptions()
+		public FLFruityLSDOptions(byte midiBank, string dlsPath, FLColor3 color)
 		{
-			DLSPath = string.Empty;
-			Color = new FLColor3(72, 81, 86);
+			MIDIBank = midiBank;
+			DLSPath = dlsPath;
+			Color = color;
+		}
+
+		public static FLColor3 GetDefaultColor(FLVersionCompat verCom)
+		{
+			switch (verCom)
+			{
+				case FLVersionCompat.V20_9_2__B2963: return new FLColor3(72, 81, 86);
+				case FLVersionCompat.V21_0_3__B3517: return new FLColor3(92, 101, 106);
+			}
+			throw new ArgumentOutOfRangeException(nameof(verCom), verCom, null);
 		}
 
 		internal void Write(EndianBinaryWriter w, FLVersionCompat verCom, byte insertIndex)
@@ -25,29 +37,40 @@ public sealed class FLInsert
 			FLProjectWriter.Write32BitEvent(w, FLEvent.PluginColor, Color.GetFLValue());
 			if (verCom == FLVersionCompat.V21_0_3__B3517)
 			{
-				FLProjectWriter.Write8BitEvent(w, FLEvent.Unk_41, 0);
+				byte val = (byte)(Color.Equals(GetDefaultColor(verCom)) ? 0 : 1);
+				FLProjectWriter.Write8BitEvent(w, FLEvent.PluginIgnoresTheme, val);
 			}
 			FLPluginParams.WriteFruityLSD(w, MIDIBank, DLSPath);
 		}
 	}
 
+	public static FLColor3 DefaultColor => new(99, 108, 113);
+
 	private readonly byte _index;
 	public FLFruityLSDOptions? FruityLSD;
-	public FLColor3? Color;
+	public FLColor3 Color;
 	public ushort? Icon;
 	public string? Name;
 
 	internal FLInsert(byte index)
 	{
 		_index = index;
+		Color = DefaultColor;
 	}
 
 	internal void Write(EndianBinaryWriter w, FLVersionCompat verCom)
 	{
-		// These 3 can exist independently of each other unlike patterns
-		if (Color is not null)
+		// Color/Icon/Name can exist independently of each other unlike patterns
+		bool isDefaultColor = Color.Equals(DefaultColor);
+		if (!isDefaultColor)
 		{
-			FLProjectWriter.Write32BitEvent(w, FLEvent.InsertColor, Color.Value.GetFLValue());
+			FLProjectWriter.Write32BitEvent(w, FLEvent.InsertColor, Color.GetFLValue());
+		}
+		// If color is present, it goes above this
+		if (verCom == FLVersionCompat.V21_0_3__B3517)
+		{
+			byte val = (byte)(isDefaultColor ? 0 : 1);
+			FLProjectWriter.Write8BitEvent(w, FLEvent.InsertIgnoresTheme, val);
 		}
 		if (Icon is not null)
 		{
@@ -56,12 +79,6 @@ public sealed class FLInsert
 		if (Name is not null)
 		{
 			FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.InsertName, Name + '\0');
-		}
-
-		// TODO: Is Unk_42 before or after Color/Icon/Name?
-		if (verCom == FLVersionCompat.V21_0_3__B3517)
-		{
-			FLProjectWriter.Write8BitEvent(w, FLEvent.Unk_42, 0);
 		}
 
 		bool isMasterOrCurrent = _index is 0 or 126;

@@ -49,12 +49,12 @@ internal enum FLEvent : byte
 	Unk_38, // 1
 	Unk_39, // 0
 	ShouldCutNotesFast,
-	/// <summary>FL21 - On every channel/automation/insert plugin. 1 for Channels/Automations, 0 for Inserts</summary>
-	Unk_41,
-	/// <summary>FL21 - On every insert</summary>
-	Unk_42, // 0
-	/// <summary>FL21 - On every playlist track</summary>
-	Unk_43, // 0
+	/// <summary>FL21</summary>
+	PluginIgnoresTheme,
+	/// <summary>FL21</summary>
+	InsertIgnoresTheme,
+	/// <summary>FL21</summary>
+	PlaylistTrackIgnoresTheme,
 	/// <summary>FL21</summary>
 	PlaylistShouldUseAutoCrossfades,
 

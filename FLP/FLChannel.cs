@@ -79,6 +79,9 @@ public sealed class FLChannel
 		0x9B, 0xFF, 0xFF, 0xFF // -101
 	};
 
+	public static FLColor3 DefaultColor => new(92, 101, 106);
+	public static FLColor3 MIDIOutDefaultColor => new(96, 114, 115);
+
 	internal ushort Index;
 
 	public string Name;
@@ -96,7 +99,7 @@ public sealed class FLChannel
 	internal FLChannel(string name, byte midiChan, byte midiBank, MIDIProgram midiProgram, FLChannelFilter filter)
 	{
 		Name = name;
-		Color = new FLColor3(96, 114, 115);
+		Color = MIDIOutDefaultColor;
 		MIDIChannel = midiChan;
 		MIDIBank = midiBank;
 		MIDIProgram = midiProgram;
@@ -111,18 +114,20 @@ public sealed class FLChannel
 	{
 		FLProjectWriter.Write16BitEvent(w, FLEvent.NewChannel, Index);
 		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelType, (byte)FLChannelType.FLPlugin);
+
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "MIDI Out\0");
 		FLNewPlugin.WriteMIDIOut(w);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PluginName, Name + '\0');
 		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginIcon, 0);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginColor, Color.GetFLValue());
-
 		if (verCom == FLVersionCompat.V21_0_3__B3517)
 		{
-			FLProjectWriter.Write8BitEvent(w, FLEvent.Unk_41, 1);
+			// Always 1 with MIDIOut even if you use the theme's suggested default colors
+			// Sampler is 0 though if you use suggested
+			FLProjectWriter.Write8BitEvent(w, FLEvent.PluginIgnoresTheme, 1);
 		}
-
 		FLPluginParams.WriteMIDIOut(w, MIDIChannel, MIDIBank, MIDIProgram);
+
 		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelIsEnabled, 1);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.Delay, Delay);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.DelayReso, 0x800_080);

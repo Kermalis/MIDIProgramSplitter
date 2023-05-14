@@ -42,7 +42,7 @@ public sealed partial class FLAutomation
 	internal FLAutomation(string name, MyType type, List<FLChannel>? targets, FLChannelFilter filter)
 	{
 		Name = name;
-		Color = GetColor(type);
+		Color = GetDefaultColor(type);
 		Type = type;
 		Targets = targets;
 		Points = new List<Point>();
@@ -50,7 +50,7 @@ public sealed partial class FLAutomation
 		PitchBendOrTimeRange = 2;
 	}
 
-	public static FLColor3 GetColor(MyType type)
+	public static FLColor3 GetDefaultColor(MyType type)
 	{
 		switch (type)
 		{
@@ -112,18 +112,19 @@ public sealed partial class FLAutomation
 	{
 		FLProjectWriter.Write16BitEvent(w, FLEvent.NewChannel, Index);
 		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelType, (byte)FLChannelType.Automation);
+
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.DefPluginName, "\0");
 		FLNewPlugin.WriteAutomation(w);
 		FLProjectWriter.WriteUTF16EventWithLength(w, FLEvent.PluginName, Name + '\0');
 		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginIcon, 0);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.PluginColor, Color.GetFLValue());
-
 		if (verCom == FLVersionCompat.V21_0_3__B3517)
 		{
-			FLProjectWriter.Write8BitEvent(w, FLEvent.Unk_41, 1);
+			// Always 1 with automation even if you use the theme's suggested default colors
+			FLProjectWriter.Write8BitEvent(w, FLEvent.PluginIgnoresTheme, 1);
 		}
-
 		// No plugin params
+
 		FLProjectWriter.Write8BitEvent(w, FLEvent.ChannelIsEnabled, 1);
 		FLProjectWriter.WriteArrayEventWithLength(w, FLEvent.Delay, FLChannel.Delay);
 		FLProjectWriter.Write32BitEvent(w, FLEvent.DelayReso, 0x800_080);
@@ -169,7 +170,7 @@ public sealed partial class FLAutomation
 
 		w.WriteUInt32(1);
 		w.WriteUInt32(0x40);
-		w.WriteByte(MyTypeToAutoType(Type));
+		w.WriteByte(MyTypeToAutoType(Type)); // Probably a bool for positive/negative graph
 		w.WriteUInt32(4);
 		w.WriteUInt32(3);
 		w.WriteUInt32(numPoints);
