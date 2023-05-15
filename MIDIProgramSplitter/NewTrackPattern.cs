@@ -70,7 +70,7 @@ internal sealed class NewTrackPattern
 	public FLPattern AddToFLP(FLPSaver saver, FLChannel channel, FLPlaylistTrack pTrack, MIDIProgram program, string? name)
 	{
 		FLPattern p = saver.FLP.CreatePattern();
-		p.Color = saver.Options.GetPatternColor(program);
+		p.Color = saver.Options.GetPatternColor(program, pTrack);
 		p.Name = name;
 
 		uint startTick = GetStartTick(); // TODO: Some quantization?

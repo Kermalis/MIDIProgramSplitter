@@ -5,33 +5,50 @@ using System.Linq;
 
 namespace MIDIProgramSplitter;
 
-// TODO: Option to open FL project after export
 public sealed class FLPSaveOptions
 {
-	public enum EPatternColorMode : byte
-	{
-		None,
-		Random,
-		Track, // TODO
-		Instrument,
-	}
-	public enum EInsertColorMode : byte
-	{
-		None,
-		Random,
-		Track, // TODO
-	}
-	public enum EAutomationColorMode : byte
-	{
-		None,
-		Random,
-		Track, // TODO
-	}
 	public enum AutomationGroupMode : byte
 	{
 		None,
 		GroupByChannel,
 		GroupAll,
+	}
+	public enum InstrumentTrackColorMode : byte
+	{
+		None,
+		Random,
+	}
+	public enum AutomationTrackColorMode : byte
+	{
+		None,
+		Random,
+		InstrumentTrack,
+	}
+	public enum MIDIOutColorMode : byte
+	{
+		None,
+		Random,
+		InstrumentTrack,
+		Instrument,
+	}
+	public enum PatternColorMode : byte
+	{
+		None,
+		Random,
+		InstrumentTrack,
+		Instrument,
+	}
+	public enum InsertColorMode : byte
+	{
+		None,
+		Random,
+		InstrumentTrack,
+	}
+	public enum AutomationColorMode : byte
+	{
+		None,
+		Random,
+		AutomationTrack,
 	}
 
 	public FLVersionCompat FLVersionCompat;
@@ -47,10 +64,14 @@ public sealed class FLPSaveOptions
 
 	public bool AppendInstrumentNamesToPatterns;
 
-	public EPatternColorMode PatternColorMode;
-	public EInsertColorMode InsertColorMode;
-	public EAutomationColorMode AutomationColorMode;
+	public InstrumentTrackColorMode InstrumentTrackColoring;
+	public AutomationTrackColorMode AutomationTrackColoring;
+	public MIDIOutColorMode MIDIOutColoring;
+	public PatternColorMode PatternColoring;
+	public InsertColorMode InsertColoring;
+	public AutomationColorMode AutomationColoring;
 	// TODO: Channel colors
+	// TODO: Option to open FL project after export
 
 	public FLPSaveOptions()
 	{
@@ -67,9 +88,12 @@ public sealed class FLPSaveOptions
 
 		AppendInstrumentNamesToPatterns = true;
 
-		PatternColorMode = EPatternColorMode.Instrument;
-		InsertColorMode = EInsertColorMode.None;
-		AutomationColorMode = EAutomationColorMode.None;
+		InstrumentTrackColoring = InstrumentTrackColorMode.None;
+		AutomationTrackColoring = AutomationTrackColorMode.None;
+		MIDIOutColoring = MIDIOutColorMode.Instrument;
+		PatternColoring = PatternColorMode.Instrument;
+		InsertColoring = InsertColorMode.None;
+		AutomationColoring = AutomationColorMode.None;
 	}
 
 	internal void Validate()
@@ -84,31 +108,58 @@ public sealed class FLPSaveOptions
 		}
 	}
 
-	public FLColor3 GetPatternColor(MIDIProgram program)
+	public FLColor3 GetInstrumentTrackColor()
 	{
-		switch (PatternColorMode)
+		switch (InstrumentTrackColoring)
 		{
-			case EPatternColorMode.Random: return FLColor3.GetRandom();
-			case EPatternColorMode.Instrument: return FLColor3.FromRGB(MIDIUtils.InstrumentColorsRGB[(int)program]);
-			case EPatternColorMode.Track: // TODO
+			case InstrumentTrackColorMode.Random: return FLColor3.GetRandom();
+			default: return FLPlaylistTrack.DefaultColor;
+		}
+	}
+	public FLColor3 GetAutomationTrackColor(FLPlaylistTrack instTrack)
+	{
+		switch (AutomationTrackColoring)
+		{
+			case AutomationTrackColorMode.Random: return FLColor3.GetRandom();
+			case AutomationTrackColorMode.InstrumentTrack: return instTrack.Color;
+			default: return FLPlaylistTrack.DefaultColor;
+		}
+	}
+	public FLColor3 GetMIDIOutColor(MIDIProgram program, FLPlaylistTrack instTrack)
+	{
+		switch (MIDIOutColoring)
+		{
+			case MIDIOutColorMode.Random: return FLColor3.GetRandom();
+			case MIDIOutColorMode.Instrument: return FLColor3.FromRGB(MIDIUtils.InstrumentColorsRGB[(int)program]);
+			case MIDIOutColorMode.InstrumentTrack: return instTrack.Color;
 			default: return FLPattern.DefaultColor;
 		}
 	}
-	public FLColor3 GetInsertColor()
+	public FLColor3 GetPatternColor(MIDIProgram program, FLPlaylistTrack instTrack)
 	{
-		switch (InsertColorMode)
+		switch (PatternColoring)
 		{
-			case EInsertColorMode.Random: return FLColor3.GetRandom();
-			case EInsertColorMode.Track: // TODO
+			case PatternColorMode.Random: return FLColor3.GetRandom();
+			case PatternColorMode.Instrument: return FLColor3.FromRGB(MIDIUtils.InstrumentColorsRGB[(int)program]);
+			case PatternColorMode.InstrumentTrack: return instTrack.Color;
+			default: return FLPattern.DefaultColor;
+		}
+	}
+	public FLColor3 GetInsertColor(FLPlaylistTrack instTrack)
+	{
+		switch (InsertColoring)
+		{
+			case InsertColorMode.Random: return FLColor3.GetRandom();
+			case InsertColorMode.InstrumentTrack: return instTrack.Color;
 			default: return FLInsert.DefaultColor;
 		}
 	}
-	public FLColor3 GetAutomationColor(FLAutomation.MyType type)
+	public FLColor3 GetAutomationColor(FLAutomation.MyType type, FLPlaylistTrack autoTrack)
 	{
-		switch (AutomationColorMode)
+		switch (AutomationColoring)
 		{
-			case EAutomationColorMode.Random: return FLColor3.GetRandom();
-			case EAutomationColorMode.Track: // TODO
+			case AutomationColorMode.Random: return FLColor3.GetRandom();
+			case AutomationColorMode.AutomationTrack: return autoTrack.Color;
 			default: return FLAutomation.GetDefaultColor(type);
 		}
 	}

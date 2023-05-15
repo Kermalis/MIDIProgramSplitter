@@ -26,6 +26,7 @@ partial class TrackData
 	}
 	private List<FLChannel> FLP_CreateChannels(FLPSaver saver, FLChannelFilter filter, Dictionary<MIDIProgram, NewTrack> dict)
 	{
+		FLPlaylistTrack instTrack = GetInstTrack(saver.FLP.Arrangements[0]);
 		byte midiChan = _trackChannel; // TODO: Option to make every MIDI track have a unique channel
 		byte midiBank = (byte)(_trackIndex - 1); // Meta track doesn't have one
 
@@ -33,6 +34,7 @@ partial class TrackData
 		foreach (NewTrack newT in dict.Values)
 		{
 			FLChannel c = saver.FLP.CreateChannel(newT.Name, midiChan, midiBank, newT.Program, filter);
+			c.Color = saver.Options.GetMIDIOutColor(newT.Program, instTrack);
 			c.PitchBendRange = saver.Options.PitchBendRange;
 			ourChans.Add(c);
 		}
@@ -40,9 +42,8 @@ partial class TrackData
 	}
 	private void FLP_CreatePatterns(FLPSaver saver, string name, List<FLChannel> ourChans, Dictionary<MIDIProgram, NewTrack> dict)
 	{
-		FLArrangement arrang = saver.FLP.Arrangements[0];
-		FLPlaylistTrack pTrack = arrang.PlaylistTracks[_trackIndex - 1]; // Meta track won't have one
-		pTrack.Name = name;
+		FLPlaylistTrack instTrack = GetInstTrack(saver.FLP.Arrangements[0]);
+		instTrack.Name = name;
 
 		var createdPats = new List<(NewTrackPattern, FLPattern)>();
 
@@ -59,7 +60,7 @@ partial class TrackData
 				// First check if an identical pattern exists
 				if (FLP_CheckForDuplicatePattern(createdPats, newP, out FLPattern? flPat))
 				{
-					newP.AddToFLP_Duplicate(saver, flPat, pTrack);
+					newP.AddToFLP_Duplicate(saver, flPat, instTrack);
 				}
 				else
 				{
@@ -68,7 +69,7 @@ partial class TrackData
 					{
 						pName += " - " + newT.Program;
 					}
-					flPat = newP.AddToFLP(saver, ourChan, pTrack, newT.Program, pName);
+					flPat = newP.AddToFLP(saver, ourChan, instTrack, newT.Program, pName);
 					createdPats.Add((newP, flPat));
 				}
 			}
@@ -101,6 +102,11 @@ partial class TrackData
 		HandlePanpotEvents(saver, filter, ourChans);
 		HandlePitchEvents(saver, filter, ourChans);
 		HandleProgramEvents(saver, filter, ourChans);
+	}
+
+	private FLPlaylistTrack GetInstTrack(FLArrangement arrang)
+	{
+		return arrang.PlaylistTracks[_trackIndex - 1]; // Meta track won't have one
 	}
 
 	private void HandleVolumeEvents(FLPSaver saver, FLChannelFilter filter, List<FLChannel> ourChans)
@@ -274,8 +280,14 @@ partial class TrackData
 
 	private FLAutomation CreateAuto(FLPSaver saver, string type, FLAutomation.MyType flType, FLChannelFilter filter, List<FLChannel> ourChans)
 	{
+		FLArrangement arrang = saver.FLP.Arrangements[0];
+
+		FLPlaylistTrack instTrack = GetInstTrack(arrang);
+		FLPlaylistTrack autoTrack = arrang.PlaylistTracks[saver.AutomationTrackIndex];
+		autoTrack.Color = saver.Options.GetAutomationTrackColor(instTrack);
+
 		FLAutomation a = saver.FLP.CreateAutomation($"Track {_trackIndex} {type}", flType, ourChans, filter);
-		a.Color = saver.Options.GetAutomationColor(flType);
+		a.Color = saver.Options.GetAutomationColor(flType, autoTrack);
 		return a;
 	}
 }

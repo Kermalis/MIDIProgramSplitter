@@ -14,7 +14,7 @@ internal sealed class NewTrackDict
 		// Create a track for each used voice
 		foreach (MIDIProgram voice in usedVoices)
 		{
-			Dict.Add(voice, new NewTrack(voice, string.Format("T{0}C{1} {2}", trackIndex + 1, channel + 1, voice)));
+			Dict.Add(voice, new NewTrack(voice, string.Format("T{0}C{1} {2}", trackIndex, channel + 1, voice)));
 		}
 	}
 

@@ -2,7 +2,7 @@
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		mc:Ignorable="d" MinWidth="200" Width="1400" MinHeight="200" Height="682"
+		mc:Ignorable="d" MinWidth="200" Width="1400" MinHeight="200" Height="791"
 		x:Class="MIDIProgramSplitter.GUI.MainWindow"
 		Title="MIDI Program Splitter"
 
@@ -135,6 +135,9 @@
 								<RowDefinition Height="Auto" />
 								<RowDefinition Height="Auto" />
 								<RowDefinition Height="Auto" />
+								<RowDefinition Height="Auto" />
+								<RowDefinition Height="Auto" />
+								<RowDefinition Height="Auto" />
 							</Grid.RowDefinitions>
 
 							<TextBlock Grid.Column="0" Grid.Row="0" Text="FL Studio Project Version:" />
@@ -168,26 +171,47 @@
 							<TextBlock Grid.Column="0" Grid.Row="5" Text="Include Instrument Names In Pattern Names:" />
 							<CheckBox Grid.Column="1" Grid.Row="5" Name="FLPAppendInstrumentNamesToPatterns" />
 
-							<TextBlock Grid.Column="0" Grid.Row="6" Text="Pattern Coloring:" />
-							<ComboBox Grid.Column="1" Grid.Row="6" Name="FLPPatternColorMode">
+							<TextBlock Grid.Column="0" Grid.Row="6" Text="Instrument Track Coloring:" />
+							<ComboBox Grid.Column="1" Grid.Row="6" Name="FLPInstrumentTrackColoring">
 								<ComboBoxItem>None</ComboBoxItem>
 								<ComboBoxItem>Random</ComboBoxItem>
-								<ComboBoxItem>Track (Not Implemented)</ComboBoxItem>
+							</ComboBox>
+
+							<TextBlock Grid.Column="0" Grid.Row="7" Text="Automation Track Coloring:" />
+							<ComboBox Grid.Column="1" Grid.Row="7" Name="FLPAutomationTrackColoring">
+								<ComboBoxItem>None</ComboBoxItem>
+								<ComboBoxItem>Random</ComboBoxItem>
+								<ComboBoxItem>Instrument Track</ComboBoxItem>
+							</ComboBox>
+
+							<TextBlock Grid.Column="0" Grid.Row="8" Text="MIDI Out Coloring:" />
+							<ComboBox Grid.Column="1" Grid.Row="8" Name="FLPMIDIOutColoring">
+								<ComboBoxItem>None</ComboBoxItem>
+								<ComboBoxItem>Random</ComboBoxItem>
+								<ComboBoxItem>Instrument Track</ComboBoxItem>
 								<ComboBoxItem>Instrument</ComboBoxItem>
 							</ComboBox>
 
-							<TextBlock Grid.Column="0" Grid.Row="7" Text="Insert Coloring:" />
-							<ComboBox Grid.Column="1" Grid.Row="7" Name="FLPInsertColorMode">
+							<TextBlock Grid.Column="0" Grid.Row="9" Text="Pattern Coloring:" />
+							<ComboBox Grid.Column="1" Grid.Row="9" Name="FLPPatternColoring">
 								<ComboBoxItem>None</ComboBoxItem>
 								<ComboBoxItem>Random</ComboBoxItem>
-								<ComboBoxItem>Track (Not Implemented)</ComboBoxItem>
+								<ComboBoxItem>Instrument Track</ComboBoxItem>
+								<ComboBoxItem>Instrument</ComboBoxItem>
 							</ComboBox>
 
-							<TextBlock Grid.Column="0" Grid.Row="8" Text="Automation Coloring:" />
-							<ComboBox Grid.Column="1" Grid.Row="8" Name="FLPAutomationColorMode">
+							<TextBlock Grid.Column="0" Grid.Row="10" Text="Insert Coloring:" />
+							<ComboBox Grid.Column="1" Grid.Row="10" Name="FLPInsertColoring">
 								<ComboBoxItem>None</ComboBoxItem>
 								<ComboBoxItem>Random</ComboBoxItem>
-								<ComboBoxItem>Track (Not Implemented)</ComboBoxItem>
+								<ComboBoxItem>Instrument Track</ComboBoxItem>
+							</ComboBox>
+
+							<TextBlock Grid.Column="0" Grid.Row="11" Text="Automation Coloring:" />
+							<ComboBox Grid.Column="1" Grid.Row="11" Name="FLPAutomationColoring">
+								<ComboBoxItem>None</ComboBoxItem>
+								<ComboBoxItem>Random</ComboBoxItem>
+								<ComboBoxItem>Instrument Track</ComboBoxItem>
 							</ComboBox>
 
 						</Grid>

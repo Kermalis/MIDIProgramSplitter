@@ -21,8 +21,11 @@ partial class Splitter
 
 		for (int i = 0; i < saver.AutomationTrackIndex; i++)
 		{
+			FLPlaylistTrack track = saver.FLP.Arrangements[0].PlaylistTracks[i];
+			track.Color = saver.Options.GetInstrumentTrackColor();
+
 			FLInsert ins = saver.FLP.Inserts[i + 1]; // Skip master insert
-			ins.Color = saver.Options.GetInsertColor();
+			ins.Color = saver.Options.GetInsertColor(track);
 			ins.Name = string.Format("T{0:D2}", i + 1); // Skip meta track
 			ins.FruityLSD = new FLInsert.FLFruityLSDOptions((byte)i, options.DLSPath, FLInsert.FLFruityLSDOptions.GetDefaultColor(options.FLVersionCompat));
 		}

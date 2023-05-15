@@ -148,9 +148,11 @@ internal sealed partial class MainWindow : Window
 			return;
 		}
 
+		string outPath = GetFilePath(result);
+
 		try
 		{
-			using (FileStream s = File.Create(GetFilePath(result)))
+			using (FileStream s = File.Create(outPath))
 			{
 				_splitter.SaveMIDI(s);
 			}
@@ -160,6 +162,8 @@ internal sealed partial class MainWindow : Window
 			string str = ex.ToString();
 			await DisplayPopup("Error Saving MIDI", str);
 		}
+
+		await DisplayPopup("Success", string.Format("Successfully saved \"{0}\".", outPath));
 	}
 	private async void OnClickedSaveFLP(object? sender, RoutedEventArgs e)
 	{
@@ -187,10 +191,11 @@ internal sealed partial class MainWindow : Window
 		}
 
 		UpdateFLPOptions();
+		string outPath = GetFilePath(result);
 
 		try
 		{
-			using (FileStream s = File.Create(GetFilePath(result)))
+			using (FileStream s = File.Create(outPath))
 			{
 				_splitter.SaveFLP(s, _flpOptions);
 			}
@@ -199,7 +204,10 @@ internal sealed partial class MainWindow : Window
 		{
 			string str = ex.ToString();
 			await DisplayPopup("Error Saving FLP", str);
+			return;
 		}
+
+		await DisplayPopup("Success", string.Format("Successfully saved \"{0}\".", outPath));
 	}
 
 	private static string GetFilePath(IStorageFile f)
@@ -222,9 +230,12 @@ internal sealed partial class MainWindow : Window
 
 		FLPAppendInstrumentNamesToPatterns.IsChecked = _flpOptions.AppendInstrumentNamesToPatterns;
 
-		FLPPatternColorMode.SelectedIndex = (int)_flpOptions.PatternColorMode;
-		FLPInsertColorMode.SelectedIndex = (int)_flpOptions.InsertColorMode;
-		FLPAutomationColorMode.SelectedIndex = (int)_flpOptions.AutomationColorMode;
+		FLPInstrumentTrackColoring.SelectedIndex = (int)_flpOptions.InstrumentTrackColoring;
+		FLPAutomationTrackColoring.SelectedIndex = (int)_flpOptions.AutomationTrackColoring;
+		FLPMIDIOutColoring.SelectedIndex = (int)_flpOptions.MIDIOutColoring;
+		FLPPatternColoring.SelectedIndex = (int)_flpOptions.PatternColoring;
+		FLPInsertColoring.SelectedIndex = (int)_flpOptions.InsertColoring;
+		FLPAutomationColoring.SelectedIndex = (int)_flpOptions.AutomationColoring;
 	}
 	private void UpdateFLPOptions()
 	{
@@ -241,9 +252,12 @@ internal sealed partial class MainWindow : Window
 
 		_flpOptions.AppendInstrumentNamesToPatterns = FLPAppendInstrumentNamesToPatterns.IsChecked!.Value;
 
-		_flpOptions.PatternColorMode = (FLPSaveOptions.EPatternColorMode)FLPPatternColorMode.SelectedIndex;
-		_flpOptions.InsertColorMode = (FLPSaveOptions.EInsertColorMode)FLPInsertColorMode.SelectedIndex;
-		_flpOptions.AutomationColorMode = (FLPSaveOptions.EAutomationColorMode)FLPAutomationColorMode.SelectedIndex;
+		_flpOptions.InstrumentTrackColoring = (FLPSaveOptions.InstrumentTrackColorMode)FLPInstrumentTrackColoring.SelectedIndex;
+		_flpOptions.AutomationTrackColoring = (FLPSaveOptions.AutomationTrackColorMode)FLPAutomationTrackColoring.SelectedIndex;
+		_flpOptions.MIDIOutColoring = (FLPSaveOptions.MIDIOutColorMode)FLPMIDIOutColoring.SelectedIndex;
+		_flpOptions.PatternColoring = (FLPSaveOptions.PatternColorMode)FLPPatternColoring.SelectedIndex;
+		_flpOptions.InsertColoring = (FLPSaveOptions.InsertColorMode)FLPInsertColoring.SelectedIndex;
+		_flpOptions.AutomationColoring = (FLPSaveOptions.AutomationColorMode)FLPAutomationColoring.SelectedIndex;
 	}
 
 	private async Task DisplayPopup(string title, string text)
@@ -298,8 +312,14 @@ internal sealed partial class MainWindow : Window
 			okButton.Click -= ClosePopup;
 			backgroundWindow.Close();
 		}
+		void FocusOK(object? sender, EventArgs e)
+		{
+			backgroundWindow.Opened -= FocusOK;
+			okButton.Focus();
+		}
 
 		okButton.Click += ClosePopup;
+		backgroundWindow.Opened += FocusOK;
 		await backgroundWindow.ShowDialog(this);
 	}
 }
