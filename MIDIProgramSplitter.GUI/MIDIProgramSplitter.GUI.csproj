@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+		<OutputType>WinExe</OutputType>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+
+		<RootNamespace>MIDIProgramSplitter.GUI</RootNamespace>
+		
+		<BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<TrimmerRootDescriptor Include="Roots.xml" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia" Version="11.0.0-preview5" />
+		<PackageReference Include="Avalonia.Desktop" Version="11.0.0-preview5" />
+		<PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.0-preview5" />
+		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.0-preview5" />
+		<PackageReference Include="XamlNameReferenceGenerator" Version="1.5.1" />
+		<ProjectReference Include="../MIDIProgramSplitter/MIDIProgramSplitter.csproj" />
+		<Reference Include="KMIDI">
+			<HintPath>..\Shared Dependencies\KMIDI.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+	
+</Project>

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+		<OutputType>Exe</OutputType>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+		<RootNamespace>MIDIProgramSplitter.CMD</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="../MIDIProgramSplitter/MIDIProgramSplitter.csproj" />
+		<Reference Include="KMIDI">
+			<HintPath>..\Shared Dependencies\KMIDI.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
+	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+		<DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+	</PropertyGroup>
+
+</Project>
