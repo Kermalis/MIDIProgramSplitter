@@ -42,7 +42,7 @@ internal sealed partial class TrackData
 	private readonly List<IMIDIEvent<ProgramChangeMessage>> _programEventsOptimized;
 
 	/// <summary>Scavenges <paramref name="inTrack"/> for events and splits them into new tracks</summary>
-	public TrackData(byte trackIndex, MIDITrackChunk inTrack, byte defaultMIDIVol)
+	public TrackData(byte trackIndex, MIDITrackChunk inTrack, byte defaultMIDIVol, Splitter split)
 	{
 		_trackIndex = trackIndex;
 		_inTrack = inTrack;
@@ -58,16 +58,16 @@ internal sealed partial class TrackData
 		_pitchEventsOptimized = new List<IMIDIEvent<PitchBendMessage>>();
 		_programEventsOptimized = new List<IMIDIEvent<ProgramChangeMessage>>();
 
-		_trackChannel = GatherTrackInfoFirstPass(defaultMIDIVol);
+		_trackChannel = GatherTrackInfoFirstPass(defaultMIDIVol, split);
 
 		_newTracks = _usedPrograms.Count == 0 ? null : new NewTrackDict(trackIndex, _trackChannel, _usedPrograms);
 	}
 
 	/// <summary>Program changes with no NoteOn are not recorded.</summary>
-	private byte GatherTrackInfoFirstPass(byte defaultMIDIVol)
+	private byte GatherTrackInfoFirstPass(byte defaultMIDIVol, Splitter split)
 	{
 		Console.WriteLine();
-		Console.WriteLine("Beginning first pass on Track {0}...", _trackIndex);
+		split.Log(string.Format("Beginning first pass on Track {0}...", _trackIndex));
 
 		byte chan = byte.MaxValue;
 
@@ -167,7 +167,7 @@ internal sealed partial class TrackData
 			// Check for a program change after a NoteOn in the same tick
 			if (ev.Msg is ProgramChangeMessage)
 			{
-				CheckProgramChangeWarning(ev);
+				CheckProgramChangeWarning(ev, split);
 			}
 		}
 
@@ -176,10 +176,10 @@ internal sealed partial class TrackData
 			// TODO: Allow, but skip track
 			throw new InvalidDataException($"Track {_trackIndex} had no MIDI channel events...");
 		}
-		Console.WriteLine("Track {0} detected with channel {1}!", _trackIndex, chan);
+		split.Log(string.Format("Track {0} detected with channel {1}!", _trackIndex, chan));
 		return chan;
 	}
-	private static void CheckProgramChangeWarning(IMIDIEvent ev)
+	private static void CheckProgramChangeWarning(IMIDIEvent ev, Splitter split)
 	{
 		for (IMIDIEvent? prev = ev.Prev; prev is not null; prev = prev.Prev)
 		{
@@ -189,7 +189,7 @@ internal sealed partial class TrackData
 			}
 			if (prev.Msg is NoteOnMessage n)
 			{
-				Console.WriteLine("Warning: Two events at the same tick: @{2} = ({0}) & ({1})", n, ev.Msg, ev.Ticks);
+				split.Log(string.Format("Warning: Two events at the same tick: @{2} = ({0}) & ({1})", n, ev.Msg, ev.Ticks));
 			}
 		}
 	}
@@ -206,11 +206,11 @@ internal sealed partial class TrackData
 	}
 
 	/// <summary>Iterates all messages in <see cref="_inTrack"/> and copies/splits them to the new tracks</summary>
-	public void SplitTrack()
+	public void SplitTrack(Splitter split)
 	{
 		if (_newTracks is null)
 		{
-			Console.WriteLine("Skipping track {0} because it has no notes...", _trackIndex);
+			split.Log(string.Format("Skipping track {0} because it has no notes...", _trackIndex));
 			return;
 		}
 
@@ -222,7 +222,7 @@ internal sealed partial class TrackData
 
 		for (IMIDIEvent? e = _inTrack.First; e is not null; e = e.Next)
 		{
-			if (SplitTrack_SpecialMessage(e, ts, ref curPattern))
+			if (SplitTrack_SpecialMessage(e, ts, split, ref curPattern))
 			{
 				_newTracks.InsertEventIntoAllNewTracks(e);
 			}
@@ -234,7 +234,7 @@ internal sealed partial class TrackData
 		}
 	}
 	/// <summary>Returns false if this event should not be added to the new tracks</summary>
-	private bool SplitTrack_SpecialMessage(IMIDIEvent ev, NewTrackDict ts, ref NewTrackPattern? curPattern)
+	private bool SplitTrack_SpecialMessage(IMIDIEvent ev, NewTrackDict ts, Splitter split, ref NewTrackPattern? curPattern)
 	{
 		switch (ev)
 		{
@@ -283,7 +283,7 @@ internal sealed partial class TrackData
 			}
 			case IMIDIEvent<MetaMessage> e:
 			{
-				Console.WriteLine("Track {0}: {1}", _trackIndex, e);
+				split.Log(string.Format("Track {0}: {1}", _trackIndex, e));
 
 				if (e.Msg.Type == MetaMessageType.TrackName)
 				{

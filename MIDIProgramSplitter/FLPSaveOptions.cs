@@ -13,7 +13,7 @@ public sealed class FLPSaveOptions
 		None,
 		Random,
 		Track, // TODO
-		Instrument, // TODO
+		Instrument,
 	}
 	public enum EInsertColorMode : byte
 	{
@@ -37,11 +37,11 @@ public sealed class FLPSaveOptions
 	public FLVersionCompat FLVersionCompat;
 
 	public string DLSPath;
-	public float AutomationTrackSize;
 
 	public int PitchBendRange;
 	public byte DefaultMIDIVolume;
 
+	public float AutomationTrackSize;
 	public AutomationGroupMode AutomationGrouping;
 	public bool CollapseAutomationGroups;
 
@@ -57,15 +57,15 @@ public sealed class FLPSaveOptions
 		FLVersionCompat = FLVersionCompat.V20_9_2__B2963;
 
 		DLSPath = string.Empty;
-		AutomationTrackSize = FLPlaylistTrack.SIZE_MIN;
 
 		PitchBendRange = 12;
 		DefaultMIDIVolume = 127; // SDAT 127, MP2K 100. I believe MIDI defaults to 127
 
+		AutomationTrackSize = FLPlaylistTrack.SIZE_MIN;
 		AutomationGrouping = AutomationGroupMode.GroupAll;
 		CollapseAutomationGroups = true;
 
-		//AppendInstrumentNamesToPatterns = true;
+		AppendInstrumentNamesToPatterns = true;
 
 		PatternColorMode = EPatternColorMode.Instrument;
 		InsertColorMode = EInsertColorMode.None;

@@ -2,74 +2,216 @@
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+		mc:Ignorable="d" Width="1400" Height="682"
 		x:Class="MIDIProgramSplitter.GUI.MainWindow"
-		Title="MIDI Program Splitter">
+		Title="MIDI Program Splitter"
+
+		TransparencyLevelHint="AcrylicBlur"
+		Background="Transparent">
 	<Window.Styles>
 		<Style Selector="TextBlock">
-			<Setter Property="Margin" Value="5"/>
-			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="Margin" Value="5" />
+			<Setter Property="VerticalAlignment" Value="Center" />
 			<Setter Property="TextWrapping" Value="Wrap" />
 		</Style>
 		<Style Selector="Button">
-			<Setter Property="Margin" Value="5"/>
-			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="Margin" Value="5" />
+			<Setter Property="VerticalAlignment" Value="Center" />
+		</Style>
+		<Style Selector="StackPanel">
+			<Setter Property="Margin" Value="5" />
+		</Style>
+		<Style Selector="Border.AvaloniaSucks">
+			<Setter Property="Margin" Value="2" />
+			<Setter Property="BorderThickness" Value="1" />
+			<Setter Property="CornerRadius" Value="8,2,8,2" />
+		</Style>
+		<Style Selector="Border.InMIDI">
+			<Setter Property="BorderBrush" Value="#D098F8" />
+		</Style>
+		<Style Selector="Border.OutMIDI">
+			<Setter Property="BorderBrush" Value="#C84848" />
+		</Style>
+		<Style Selector="Border.OutFLP">
+			<Setter Property="BorderBrush" Value="#F8A050" />
+		</Style>
+		<Style Selector="Grid.Options > :is(InputElement)">
+			<Setter Property="HorizontalAlignment" Value="Center" />
 		</Style>
 	</Window.Styles>
-	<DockPanel LastChildFill="True">
+	<Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="1*" />
+			<ColumnDefinition Width="1*" />
+		</Grid.ColumnDefinitions>
 
-		<StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="5">
-			<TextBlock Text="Input MIDI file:"/>
-			<Button Content="Browse" Click="OnClickedBrowseInputMIDI"/>
-			<TextBlock Name="InputMIDI"/>
+		<!--Input MIDI-->
+		<Border Classes="AvaloniaSucks InMIDI" Grid.Column="0">
+			<Grid Margin="5">
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="*" />
+				</Grid.RowDefinitions>
+
+				<TextBlock Grid.Row="0" Text="MIDI Import" HorizontalAlignment="Center" />
+
+				<Border Classes="AvaloniaSucks InMIDI" Grid.Row="1">
+					<Grid Classes="Options" Margin="5">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="*" />
+						</Grid.ColumnDefinitions>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto" />
+						</Grid.RowDefinitions>
+
+						<TextBlock Grid.Column="0" Grid.Row="0" Text="Default Volume:" />
+						<NumericUpDown Grid.Column="1" Grid.Row="0" Name="DefaultMIDIVolume" Minimum="0" Maximum="127" Increment="1" />
+					</Grid>
+				</Border>
+
+				<Border Classes="AvaloniaSucks InMIDI" Grid.Row="2">
+					<StackPanel Orientation="Vertical">
+						<Border Classes="AvaloniaSucks">
+							<Button Content="Open .MIDI" Click="OnClickedBrowseInputMIDI" />
+						</Border>
+						<Border Classes="AvaloniaSucks InMIDI">
+							<TextBlock Name="InputMIDI" />
+						</Border>
+					</StackPanel>
+				</Border>
+
+				<Border Classes="AvaloniaSucks InMIDI" Grid.Row="3">
+					<ScrollViewer VerticalScrollBarVisibility="Auto">
+						<ItemsControl Name="LogControl">
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<TextBlock FontSize="11" Margin="1" Background="#40000000" Text="{Binding}" />
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+					</ScrollViewer>
+				</Border>
+			</Grid>
+		</Border>
+
+		<StackPanel Grid.Column="1" Orientation="Vertical" Margin="0">
+
+			<!--Output MIDI-->
+			<Border Classes="AvaloniaSucks OutMIDI">
+				<StackPanel Orientation="Vertical">
+					<TextBlock Text="MIDI Export" HorizontalAlignment="Center" />
+
+					<Border Classes="AvaloniaSucks OutMIDI">
+						<TextBlock Text="No options yet :)" HorizontalAlignment="Center" />
+					</Border>
+
+					<Border Classes="AvaloniaSucks OutMIDI">
+						<Button Content="Save .MIDI" Click="OnClickedSaveMIDI" />
+					</Border>
+				</StackPanel>
+			</Border>
+
+			<!--Output FLP-->
+			<Border Classes="AvaloniaSucks OutFLP">
+				<StackPanel Orientation="Vertical">
+					<TextBlock Text="FL Studio Export" HorizontalAlignment="Center" />
+
+					<Border Classes="AvaloniaSucks OutFLP">
+						<Grid Classes="Options" Margin="5">
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="*" />
+								<ColumnDefinition Width="*" />
+							</Grid.ColumnDefinitions>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="Auto" />
+								<RowDefinition Height="Auto" />
+								<RowDefinition Height="Auto" />
+								<RowDefinition Height="Auto" />
+								<RowDefinition Height="Auto" />
+								<RowDefinition Height="Auto" />
+								<RowDefinition Height="Auto" />
+								<RowDefinition Height="Auto" />
+								<RowDefinition Height="Auto" />
+							</Grid.RowDefinitions>
+
+							<TextBlock Grid.Column="0" Grid.Row="0" Text="FL Studio Project Version:" />
+							<ComboBox Grid.Column="1" Grid.Row="0" Name="FLPVersionCompat">
+								<ComboBoxItem>v20.9.2 [build 2963]</ComboBoxItem>
+								<ComboBoxItem>v21.0.3 [build 3517]</ComboBoxItem>
+							</ComboBox>
+
+							<TextBlock Grid.Column="0" Grid.Row="1" Text="Pitch Bend Range:" />
+							<StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal">
+								<NumericUpDown Name="FLPPitchBendRange" Minimum="1" Maximum="48" Increment="1" />
+								<TextBlock Text="Semitones" />
+							</StackPanel>
+
+							<TextBlock Grid.Column="0" Grid.Row="2" Text="Automation Track Size:" />
+							<StackPanel Grid.Column="1" Grid.Row="2" Orientation="Horizontal">
+								<NumericUpDown Name="FLPAutomationTrackSize" Minimum="0" Maximum="200" Increment="10" />
+								<TextBlock Text="%" />
+							</StackPanel>
+
+							<TextBlock Grid.Column="0" Grid.Row="3" Text="Automation Grouping:" />
+							<ComboBox Grid.Column="1" Grid.Row="3" Name="FLPAutomationGrouping">
+								<ComboBoxItem>None</ComboBoxItem>
+								<ComboBoxItem>Group By Channel</ComboBoxItem>
+								<ComboBoxItem>Group All</ComboBoxItem>
+							</ComboBox>
+
+							<TextBlock Grid.Column="0" Grid.Row="4" Text="Collapse Automation Groups:" />
+							<CheckBox Grid.Column="1" Grid.Row="4" Name="FLPCollapseAutomationGroups" />
+
+							<TextBlock Grid.Column="0" Grid.Row="5" Text="Include Instrument Names In Pattern Names:" />
+							<CheckBox Grid.Column="1" Grid.Row="5" Name="FLPAppendInstrumentNamesToPatterns" />
+
+							<TextBlock Grid.Column="0" Grid.Row="6" Text="Pattern Coloring:" />
+							<ComboBox Grid.Column="1" Grid.Row="6" Name="FLPPatternColorMode">
+								<ComboBoxItem>None</ComboBoxItem>
+								<ComboBoxItem>Random</ComboBoxItem>
+								<ComboBoxItem>Track (Not Implemented)</ComboBoxItem>
+								<ComboBoxItem>Instrument</ComboBoxItem>
+							</ComboBox>
+
+							<TextBlock Grid.Column="0" Grid.Row="7" Text="Insert Coloring:" />
+							<ComboBox Grid.Column="1" Grid.Row="7" Name="FLPInsertColorMode">
+								<ComboBoxItem>None</ComboBoxItem>
+								<ComboBoxItem>Random</ComboBoxItem>
+								<ComboBoxItem>Track (Not Implemented)</ComboBoxItem>
+							</ComboBox>
+
+							<TextBlock Grid.Column="0" Grid.Row="8" Text="Automation Coloring:" />
+							<ComboBox Grid.Column="1" Grid.Row="8" Name="FLPAutomationColorMode">
+								<ComboBoxItem>None</ComboBoxItem>
+								<ComboBoxItem>Random</ComboBoxItem>
+								<ComboBoxItem>Track (Not Implemented)</ComboBoxItem>
+							</ComboBox>
+
+						</Grid>
+					</Border>
+
+					<Border Classes="AvaloniaSucks OutFLP">
+						<StackPanel Orientation="Vertical">
+							<Border Classes="AvaloniaSucks OutFLP">
+								<StackPanel Orientation="Horizontal">
+									<TextBlock Text="&quot;Fruity LSD&quot; .DLS file (optional):" />
+									<Button Content="Browse" Click="OnClickedBrowseInputDLS" />
+								</StackPanel>
+							</Border>
+							<TextBox Name="InputDLS" MaxLength="255" VerticalAlignment="Center" />
+						</StackPanel>
+					</Border>
+
+					<Border Classes="AvaloniaSucks OutFLP">
+						<Button Content="Save .FLP" Click="OnClickedSaveFLP" />
+					</Border>
+				</StackPanel>
+			</Border>
+
 		</StackPanel>
 
-		<StackPanel DockPanel.Dock="Left" Orientation="Vertical" Margin="5">
-			<TextBlock Text="MIDI Export Options:"/>
-			<CheckBox />
-			<CheckBox />
-			<CheckBox />
-			<ComboBox />
-			<DropDownButton />
-
-			<StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-				<TextBlock Text="Output MIDI file:"/>
-				<Button Content="Browse" Click="OnClickedBrowseOutputMIDI"/>
-				<TextBlock Name="OutputMIDI"/>
-			</StackPanel>
-		</StackPanel>
-		
-		<StackPanel DockPanel.Dock="Right" Orientation="Vertical" Margin="5">
-			<TextBlock Text="FL Studio Export Options:"/>
-			<CheckBox />
-			<CheckBox />
-			<CheckBox />
-			<ComboBox />
-			<DropDownButton />
-
-			<StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-				<TextBlock Text="Output .FLP file:"/>
-				<Button Content="Browse" Click="OnClickedBrowseOutputFLP"/>
-				<TextBlock Name="OutputFLP"/>
-			</StackPanel>
-
-			<StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-				<TextBlock Text="&quot;Fruity LSD&quot; .DLS file (optional):"/>
-				<Button Content="Browse" Click="OnClickedBrowseInputDLS"/>
-				<TextBox Name="InputDLS" MaxLength="255"/>
-			</StackPanel>
-
-			<Button Content="Save .FLP" Click="OnClickedSaveFLP"/>
-		</StackPanel>
-		
-		<StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="5">
-			<TextBlock Text="Input MIDI File Information:"/>
-			<CheckBox />
-			<CheckBox />
-			<CheckBox />
-			<ComboBox />
-			<DropDownButton />
-		</StackPanel>
-		
-	</DockPanel>
+	</Grid>
 </Window>

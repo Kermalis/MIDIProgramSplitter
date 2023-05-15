@@ -12,26 +12,30 @@ public sealed partial class Splitter
 	private readonly MIDITrackChunk _metaTrack;
 	private readonly List<TrackData> _splitTracks;
 
+	public readonly List<string> SLog;
+
 	public Splitter(MIDIFile m, byte defaultMIDIVol)
 	{
 		_inMIDI = m;
+		SLog = new List<string>();
+
 		_metaTrack = null!;
 
 		Console.WriteLine();
 
 		MIDIFormat format = _inMIDI.HeaderChunk.Format;
-		Console.WriteLine("MIDI Format: " + format);
+		Log("MIDI Format: " + format);
 		ushort numTracks = _inMIDI.HeaderChunk.NumTracks;
-		Console.WriteLine("MIDI Tracks: " + numTracks);
+		Log("MIDI Tracks: " + numTracks);
 		TimeDivisionValue timeDiv = _inMIDI.HeaderChunk.TimeDivision;
-		Console.WriteLine("MIDI TimeDiv: " + timeDiv);
+		Log("MIDI TimeDiv: " + timeDiv);
 
 		if (format == MIDIFormat.Format0)
 		{
 			// NumTracks already verified by MIDIFile constructor if this is Format0
-			Console.WriteLine("Attempting to convert from Format0 to Format1...");
+			Log("Attempting to convert from Format0 to Format1...");
 			_inMIDI = ConvertFormat0ToFormat1(_inMIDI);
-			Console.WriteLine("Successfully converted to Format1!");
+			Log("Successfully converted to Format1!");
 		}
 		else if (format == MIDIFormat.Format1)
 		{
@@ -65,8 +69,8 @@ public sealed partial class Splitter
 			}
 			else
 			{
-				var td = new TrackData(trackIndex, track, defaultMIDIVol);
-				td.SplitTrack();
+				var td = new TrackData(trackIndex, track, defaultMIDIVol, this);
+				td.SplitTrack(this);
 				_splitTracks.Add(td);
 			}
 			trackIndex++;
@@ -78,7 +82,13 @@ public sealed partial class Splitter
 		}
 	}
 
-	private static MIDIFile ConvertFormat0ToFormat1(MIDIFile inMIDI)
+	internal void Log(string msg)
+	{
+		Console.WriteLine(msg);
+		SLog.Add(msg);
+	}
+
+	private MIDIFile ConvertFormat0ToFormat1(MIDIFile inMIDI)
 	{
 		var newMIDI = new MIDIFile(MIDIFormat.Format1, inMIDI.HeaderChunk.TimeDivision, 2);
 		var metaTrack = new MIDITrackChunk();
@@ -97,14 +107,14 @@ public sealed partial class Splitter
 
 		return newMIDI;
 	}
-	private static void ConvertFormat0ToFormat1_HandleEvent(IMIDIEvent ev,
+	private void ConvertFormat0ToFormat1_HandleEvent(IMIDIEvent ev,
 		MIDIFile newMIDI, MIDITrackChunk metaTrack, Dictionary<byte, MIDITrackChunk> newTracks)
 	{
 		if (ev.Msg is IMIDIChannelMessage m)
 		{
 			if (!newTracks.TryGetValue(m.Channel, out MIDITrackChunk? chanTrack))
 			{
-				Console.WriteLine("Discovered channel {0}!", m.Channel);
+				Log(string.Format("Discovered channel {0}!", m.Channel));
 				chanTrack = new MIDITrackChunk();
 				newMIDI.AddChunk(chanTrack);
 				newTracks.Add(m.Channel, chanTrack);
@@ -135,7 +145,7 @@ public sealed partial class Splitter
 			}
 		}
 
-		Console.WriteLine("Skipping event: " + ev.Msg);
+		Log("Skipping event: " + ev.Msg);
 		;
 	}
 
