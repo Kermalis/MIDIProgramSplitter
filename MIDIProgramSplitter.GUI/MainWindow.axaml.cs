@@ -1,12 +1,15 @@
+using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using FLP;
 using Kermalis.MIDI;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace MIDIProgramSplitter.GUI;
 
@@ -19,6 +22,7 @@ internal sealed partial class MainWindow : Window
 	private readonly FLPSaveOptions _flpOptions;
 
 	private Splitter? _splitter;
+	private string? _fileName;
 
 	public MainWindow()
 	{
@@ -76,10 +80,12 @@ internal sealed partial class MainWindow : Window
 
 		try
 		{
-			IStorageFile storageFile = result[0];
-			InputMIDI.Text = storageFile.Path.LocalPath;
+			IStorageFile file = result[0];
+			string filePath = GetFilePath(file);
+			InputMIDI.Text = filePath;
+			_fileName = Path.GetFileNameWithoutExtension(filePath);
 
-			Stream fs = await storageFile.OpenReadAsync();
+			Stream fs = await file.OpenReadAsync();
 			var midi = new MIDIFile(fs);
 			await fs.DisposeAsync();
 
@@ -90,9 +96,10 @@ internal sealed partial class MainWindow : Window
 		}
 		catch (Exception ex)
 		{
-			Debug.WriteLine(ex); // TODO: Popup
+			string str = ex.ToString();
 			InputMIDI.Text = string.Empty;
-			LogControl.Items = new string[1] { ex.ToString() };
+			LogControl.Items = new string[1] { str };
+			await DisplayPopup("Error Opening MIDI", str);
 		}
 	}
 	private async void OnClickedBrowseInputDLS(object? sender, RoutedEventArgs e)
@@ -113,8 +120,7 @@ internal sealed partial class MainWindow : Window
 			return;
 		}
 
-		IStorageFile storageFile = result[0];
-		InputDLS.Text = storageFile.Path.LocalPath;
+		InputDLS.Text = GetFilePath(result[0]);
 	}
 
 	private async void OnClickedSaveMIDI(object? sender, RoutedEventArgs e)
@@ -133,7 +139,7 @@ internal sealed partial class MainWindow : Window
 				_midiPickerType,
 			},
 			ShowOverwritePrompt = true,
-			SuggestedFileName = _splitter.ToString(), // TODO
+			SuggestedFileName = _fileName! + ".mid",
 		};
 
 		IStorageFile? result = await StorageProvider.SaveFilePickerAsync(options);
@@ -142,9 +148,17 @@ internal sealed partial class MainWindow : Window
 			return;
 		}
 
-		using (FileStream s = Create(result))
+		try
 		{
-			_splitter.SaveMIDI(s);
+			using (FileStream s = File.Create(GetFilePath(result)))
+			{
+				_splitter.SaveMIDI(s);
+			}
+		}
+		catch (Exception ex)
+		{
+			string str = ex.ToString();
+			await DisplayPopup("Error Saving MIDI", str);
 		}
 	}
 	private async void OnClickedSaveFLP(object? sender, RoutedEventArgs e)
@@ -163,7 +177,7 @@ internal sealed partial class MainWindow : Window
 				_flpPickerType,
 			},
 			ShowOverwritePrompt = true,
-			SuggestedFileName = _splitter.ToString(), // TODO
+			SuggestedFileName = _fileName! + ".flp",
 		};
 
 		IStorageFile? result = await StorageProvider.SaveFilePickerAsync(options);
@@ -174,15 +188,23 @@ internal sealed partial class MainWindow : Window
 
 		UpdateFLPOptions();
 
-		using (FileStream s = Create(result))
+		try
 		{
-			_splitter.SaveFLP(s, _flpOptions);
+			using (FileStream s = File.Create(GetFilePath(result)))
+			{
+				_splitter.SaveFLP(s, _flpOptions);
+			}
+		}
+		catch (Exception ex)
+		{
+			string str = ex.ToString();
+			await DisplayPopup("Error Saving FLP", str);
 		}
 	}
 
-	private static FileStream Create(IStorageFile f)
+	private static string GetFilePath(IStorageFile f)
 	{
-		return File.Create(f.Path.LocalPath);
+		return f.Path.LocalPath;
 	}
 
 	private void UpdateControlFLPOptions()
@@ -222,5 +244,62 @@ internal sealed partial class MainWindow : Window
 		_flpOptions.PatternColorMode = (FLPSaveOptions.EPatternColorMode)FLPPatternColorMode.SelectedIndex;
 		_flpOptions.InsertColorMode = (FLPSaveOptions.EInsertColorMode)FLPInsertColorMode.SelectedIndex;
 		_flpOptions.AutomationColorMode = (FLPSaveOptions.EAutomationColorMode)FLPAutomationColorMode.SelectedIndex;
+	}
+
+	private async Task DisplayPopup(string title, string text)
+	{
+		var okButton = new Button
+		{
+			[Grid.RowProperty] = 1,
+			HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+			VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+			Content = "OK",
+		};
+		var backgroundWindow = new Window
+		{
+			Title = title,
+			SizeToContent = SizeToContent.WidthAndHeight,
+			MinWidth = 200,
+			MaxWidth = 1400,
+			MinHeight = 200,
+			MaxHeight = 650,
+			TransparencyLevelHint = WindowTransparencyLevel.AcrylicBlur,
+			Background = Brushes.Transparent,
+			WindowStartupLocation = WindowStartupLocation.CenterOwner,
+			ShowInTaskbar = true,
+			Topmost = true,
+			CanResize = false, // Thanks Avalonia for never allowing me to disable the maximize button while allowing manual resizing
+			Content = new Grid
+			{
+				[AutomationProperties.AccessibilityViewProperty] = AccessibilityView.Content,
+				Margin = new Thickness(5),
+				RowDefinitions =
+				{
+					new RowDefinition { Height = new GridLength(2, GridUnitType.Star) },
+					new RowDefinition { Height = new GridLength(1, GridUnitType.Star) },
+				},
+				Children =
+				{
+					new TextBlock
+					{
+						[Grid.RowProperty] = 0,
+						HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+						VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+						TextWrapping = TextWrapping.Wrap,
+						Text = text,
+					},
+					okButton,
+				},
+			}
+		};
+
+		void ClosePopup(object? sender, RoutedEventArgs e)
+		{
+			okButton.Click -= ClosePopup;
+			backgroundWindow.Close();
+		}
+
+		okButton.Click += ClosePopup;
+		await backgroundWindow.ShowDialog(this);
 	}
 }
