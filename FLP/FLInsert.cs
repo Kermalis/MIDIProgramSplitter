@@ -8,6 +8,7 @@ public sealed class FLInsert
 	public sealed class FLFruityLSDOptions
 	{
 		public byte MIDIBank;
+		/// <summary>UTF8</summary>
 		public string DLSPath;
 		public uint Icon;
 		public FLColor3 Color;

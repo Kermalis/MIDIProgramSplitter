@@ -1,5 +1,6 @@
 ﻿using Kermalis.EndianBinaryIO;
 using Kermalis.MIDI;
+using System.Text;
 
 namespace FLP;
 
@@ -36,7 +37,8 @@ internal struct FLPluginParams
 
 	public static void WriteFruityLSD(EndianBinaryWriter w, byte bankID, string dlsPath)
 	{
-		byte dlsPathLen = (byte)dlsPath.Length;
+		byte[] pathBytes = Encoding.UTF8.GetBytes(dlsPath);
+		byte dlsPathLen = (byte)pathBytes.Length;
 
 		w.WriteEnum(FLEvent.PluginParams);
 		FLProjectWriter.WriteArrayEventLength(w, (uint)(97 + dlsPathLen));
@@ -50,8 +52,8 @@ internal struct FLPluginParams
 		w.WriteUInt32(0);
 		w.WriteUInt32(bankID);
 
-		w.WriteByte(dlsPathLen);
-		w.WriteChars(dlsPath); // In ASCII
+		w.WriteByte(dlsPathLen); // It's possible this is a varLen length, but I didn't check
+		w.WriteBytes(pathBytes);
 
 		w.WriteZeroes(7);
 

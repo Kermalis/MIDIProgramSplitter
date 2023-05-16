@@ -1,7 +1,7 @@
 ﻿using FLP;
 using Kermalis.MIDI;
 using System;
-using System.Linq;
+using System.Text;
 
 namespace MIDIProgramSplitter;
 
@@ -98,13 +98,11 @@ public sealed class FLPSaveOptions
 
 	internal void Validate()
 	{
-		if (DLSPath.Length > 255)
+		// Paths normally can't be this long, but you can make the UTF8 byte[] longer with a hundred "ééééééééé" or similar characters
+		int utf8Len = Encoding.UTF8.GetByteCount(DLSPath);
+		if (utf8Len > 255)
 		{
-			throw new Exception($"DLS Path must be 255 characters or less. This one was {DLSPath.Length}.");
-		}
-		if (!DLSPath.All(char.IsAscii))
-		{
-			throw new Exception("DLS Path must consist of only ASCII characters.");
+			throw new Exception($"DLS Path encoded as UTF8 must be 255 bytes or less. This path is {DLSPath.Length} characters long and requires {utf8Len} bytes.");
 		}
 	}
 
