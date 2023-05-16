@@ -90,7 +90,8 @@ internal sealed partial class TrackData
 					_curProgram = e.Msg.Program;
 
 					_programEvents.Add(e);
-					// Don't add these with optimization unless they are used. Example is BrassSection towards the end of HGSS rival
+					// Don't add these with optimization unless they are used.
+					// Example is BrassSection towards the end of HGSS rival
 					pendingProgramChange = e;
 					break;
 				}
@@ -98,15 +99,22 @@ internal sealed partial class TrackData
 				{
 					CheckChannel(e.Msg, ref chan);
 					// If it's not a NoteOff, add it to the lists
-					if (pendingProgramChange is not null && e.Msg.Velocity != 0)
+					if (e.Msg.Velocity != 0)
 					{
+						// Always count this program as used if there is a NoteOn
+						// It's common to have no program change before a piano note
 						_usedPrograms.Add(_curProgram); // Adds if it's not already present in the hashset
-						if (curOptimizedProgram != _curProgram)
+
+						// Now deal with optimizing the program changes
+						if (pendingProgramChange is not null)
 						{
-							_programEventsOptimized.Add(pendingProgramChange);
+							if (curOptimizedProgram != _curProgram)
+							{
+								_programEventsOptimized.Add(pendingProgramChange);
+							}
+							curOptimizedProgram = _curProgram;
+							pendingProgramChange = null;
 						}
-						curOptimizedProgram = _curProgram;
-						pendingProgramChange = null;
 					}
 					break;
 				}
