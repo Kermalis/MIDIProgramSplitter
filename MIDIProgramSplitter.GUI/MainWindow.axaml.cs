@@ -97,6 +97,7 @@ internal sealed partial class MainWindow : Window
 		catch (Exception ex)
 		{
 			string str = ex.ToString();
+			_splitter = null;
 			InputMIDI.Text = string.Empty;
 			LogControl.Items = new string[1] { str };
 			await DisplayPopup("Error Opening MIDI", str);
