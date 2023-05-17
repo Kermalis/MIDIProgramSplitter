@@ -3,7 +3,8 @@
 A program that can split MIDI tracks with instrument changes without losing information!
 There is a command-line version and a GUI version, [download here](https://github.com/Kermalis/MIDIProgramSplitter/releases)!
 
-![GUI](Previews/GUI.png)
+![GUI](https://github.com/Kermalis/MIDIProgramSplitter/assets/29823718/66314f49-7370-4aa1-92f8-5b182fde9422)
+
 
 I created this program for two main uses:
 * Wanting to make remixes of video game music.
