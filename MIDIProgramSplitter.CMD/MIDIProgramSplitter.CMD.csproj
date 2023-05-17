@@ -11,10 +11,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="KMIDI" Version="1.0.0" />
 		<ProjectReference Include="../MIDIProgramSplitter/MIDIProgramSplitter.csproj" />
-		<Reference Include="KMIDI">
-			<HintPath>..\Shared Dependencies\KMIDI.dll</HintPath>
-		</Reference>
 	</ItemGroup>
 
 	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">

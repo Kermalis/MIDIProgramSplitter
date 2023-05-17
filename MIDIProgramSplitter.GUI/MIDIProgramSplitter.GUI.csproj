@@ -20,13 +20,11 @@
 		<PackageReference Include="Avalonia" Version="11.0.0-preview5" />
 		<PackageReference Include="Avalonia.Desktop" Version="11.0.0-preview5" />
 		<PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.0-preview5" />
+		<PackageReference Include="KMIDI" Version="1.0.0" />
 		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
 		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.0-preview5" />
 		<PackageReference Include="XamlNameReferenceGenerator" Version="1.5.1" />
 		<ProjectReference Include="../MIDIProgramSplitter/MIDIProgramSplitter.csproj" />
-		<Reference Include="KMIDI">
-			<HintPath>..\Shared Dependencies\KMIDI.dll</HintPath>
-		</Reference>
 	</ItemGroup>
 	
 </Project>

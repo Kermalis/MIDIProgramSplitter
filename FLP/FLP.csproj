@@ -11,9 +11,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="EndianBinaryIO" Version="2.1.0" />
-		<Reference Include="KMIDI">
-			<HintPath>..\Shared Dependencies\KMIDI.dll</HintPath>
-		</Reference>
+		<PackageReference Include="KMIDI" Version="1.0.0" />
 	</ItemGroup>
 
 </Project>
