@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>net7.0</TargetFramework>
@@ -8,6 +8,18 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
 		<RootNamespace>MIDIProgramSplitter.CMD</RootNamespace>
+
+		<Configurations>Debug;Release;Release_Win64</Configurations>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'Release_Win64'">
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+		<PublishSingleFile>true</PublishSingleFile>
+		<SelfContained>false</SelfContained>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<PublishReadyToRun>true</PublishReadyToRun>
+		<DebugSymbols>false</DebugSymbols>
+		<DebugType>None</DebugType>
 	</PropertyGroup>
 
 	<ItemGroup>
