@@ -31,4 +31,5 @@ It is its own library I wrote for this.
 ## MIDIProgramSplitter Uses:
 * [Avalonia](https://github.com/AvaloniaUI/Avalonia)
 * [EndianBinaryIO](https://github.com/Kermalis/EndianBinaryIO)
+* [KFLP](https://github.com/Kermalis/KFLP)
 * [KMIDI](https://github.com/Kermalis/KMIDI)
